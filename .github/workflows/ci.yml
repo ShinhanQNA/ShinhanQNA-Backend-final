@@ -6,10 +6,15 @@ on:
   push:
     branches: ["develop", "main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   junit:
     name: JUnit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -26,7 +31,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run JUnit tests
-        run: ./gradlew --no-daemon clean test
+        run: ./gradlew --no-daemon test
 
       - name: Upload JUnit reports
         if: always()
@@ -40,6 +45,7 @@ jobs:
   checkstyle:
     name: Checkstyle
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -69,6 +75,7 @@ jobs:
   spotbugs:
     name: SpotBugs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -98,6 +105,7 @@ jobs:
   jacoco:
     name: JaCoCo
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout

@@ -1,8 +1,11 @@
 plugins {
     java
+    checkstyle
+    jacoco
     id("org.springframework.boot") version "4.0.3"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.asciidoctor.jvm.convert") version "4.0.5"
+    id("com.github.spotbugs") version "6.0.26"
 }
 
 group = "back"
@@ -26,6 +29,24 @@ repositories {
 }
 
 extra["snippetsDir"] = file("build/generated-snippets")
+
+checkstyle {
+    toolVersion = "10.18.2"
+    configFile = file("config/checkstyle/checkstyle.xml")
+    isIgnoreFailures = false
+}
+
+spotbugs {
+    ignoreFailures.set(false)
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+val jacocoClassExcludes = listOf(
+    "**/SwConnectApplication.class",
+)
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-h2console")
@@ -54,6 +75,63 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.withType<org.gradle.api.plugins.quality.Checkstyle>().configureEach {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.named<org.gradle.testing.jacoco.tasks.JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(jacocoClassExcludes)
+                }
+            },
+        ),
+    )
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+}
+
+tasks.named<org.gradle.testing.jacoco.tasks.JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+    dependsOn(tasks.test)
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    exclude(jacocoClassExcludes)
+                }
+            },
+        ),
+    )
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.70".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(
+        "checkstyleMain",
+        "checkstyleTest",
+        "spotbugsMain",
+        "spotbugsTest",
+        "jacocoTestCoverageVerification",
+    )
 }
 
 tasks.test {

@@ -22,7 +22,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -139,5 +138,23 @@ class AuthServiceTest {
         int memberId = authService.getMemberIdFromAuthorizationHeader("Bearer access-token");
 
         assertEquals(10, memberId);
+    }
+
+    @Test
+    void getOptionalMemberIdFromAuthorizationHeaderReturnsNullWhenHeaderMissing() {
+        Integer memberId = authService.getOptionalMemberIdFromAuthorizationHeader(null);
+
+        assertNull(memberId);
+        verifyNoInteractions(bearerTokenResolver, jwtTokenProvider);
+    }
+
+    @Test
+    void getOptionalMemberIdFromAuthorizationHeaderSuccess() {
+        when(bearerTokenResolver.resolve("Bearer optional-token")).thenReturn("optional-token");
+        when(jwtTokenProvider.getMemberId("optional-token")).thenReturn(33);
+
+        Integer memberId = authService.getOptionalMemberIdFromAuthorizationHeader("Bearer optional-token");
+
+        assertEquals(33, memberId);
     }
 }

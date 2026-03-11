@@ -14,6 +14,7 @@ import back.sw.domain.report.repository.CommentReportRepository;
 import back.sw.domain.report.repository.PostReportRepository;
 import back.sw.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +39,11 @@ public class ReportService {
         }
 
         PostReport report = PostReport.create(post, member, request.reason(), request.description());
-        postReportRepository.save(report);
+        try {
+            postReportRepository.save(report);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ServiceException("409-1", "이미 신고한 게시글입니다.");
+        }
 
         return new ReportCreateResponse(report.getId());
     }
@@ -58,7 +63,11 @@ public class ReportService {
         }
 
         CommentReport report = CommentReport.create(comment, member, request.reason(), request.description());
-        commentReportRepository.save(report);
+        try {
+            commentReportRepository.save(report);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ServiceException("409-1", "이미 신고한 댓글입니다.");
+        }
 
         return new ReportCreateResponse(report.getId());
     }

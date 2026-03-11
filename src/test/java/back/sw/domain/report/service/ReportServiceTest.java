@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -111,6 +112,70 @@ class ReportServiceTest {
         ReportCreateResponse response = reportService.createCommentReport(3, 20, request);
 
         assertEquals(101, response.reportId());
+    }
+
+    @Test
+    void createCommentReportFailsWhenDuplicate() {
+        Member writer = createMember(1, "writer@univ.ac.kr", "20254001", "writer");
+        Member commenter = createMember(2, "commenter@univ.ac.kr", "20254002", "commenter");
+        Member reporter = createMember(3, "reporter@univ.ac.kr", "20254003", "reporter");
+        Post post = createPost(10, writer);
+        Comment comment = createComment(20, post, commenter);
+        ReportCreateRequest request = new ReportCreateRequest(ReportReason.ETC, "중복 신고");
+
+        when(memberRepository.findById(3)).thenReturn(Optional.of(reporter));
+        when(commentRepository.findById(20)).thenReturn(Optional.of(comment));
+        when(commentReportRepository.existsByCommentIdAndMemberId(20, 3)).thenReturn(true);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> reportService.createCommentReport(3, 20, request)
+        );
+
+        assertEquals("409-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void createPostReportFailsWhenConflictOnSave() {
+        Member writer = createMember(1, "writer@univ.ac.kr", "20254001", "writer");
+        Member reporter = createMember(2, "reporter@univ.ac.kr", "20254002", "reporter");
+        Post post = createPost(10, writer);
+        ReportCreateRequest request = new ReportCreateRequest(ReportReason.ABUSE, "동시성 충돌");
+
+        when(memberRepository.findById(2)).thenReturn(Optional.of(reporter));
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(postReportRepository.existsByPostIdAndMemberId(10, 2)).thenReturn(false);
+        when(postReportRepository.save(any(PostReport.class))).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> reportService.createPostReport(2, 10, request)
+        );
+
+        assertEquals("409-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void createCommentReportFailsWhenConflictOnSave() {
+        Member writer = createMember(1, "writer@univ.ac.kr", "20254001", "writer");
+        Member commenter = createMember(2, "commenter@univ.ac.kr", "20254002", "commenter");
+        Member reporter = createMember(3, "reporter@univ.ac.kr", "20254003", "reporter");
+        Post post = createPost(10, writer);
+        Comment comment = createComment(20, post, commenter);
+        ReportCreateRequest request = new ReportCreateRequest(ReportReason.ABUSE, "동시성 충돌");
+
+        when(memberRepository.findById(3)).thenReturn(Optional.of(reporter));
+        when(commentRepository.findById(20)).thenReturn(Optional.of(comment));
+        when(commentReportRepository.existsByCommentIdAndMemberId(20, 3)).thenReturn(false);
+        when(commentReportRepository.save(any(CommentReport.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> reportService.createCommentReport(3, 20, request)
+        );
+
+        assertEquals("409-1", exception.getRsData().resultCode());
     }
 
     @Test

@@ -9,7 +9,6 @@ public record PostDetailResponse(
         BoardType boardType,
         String title,
         String content,
-        int viewCount,
         int likeCount,
         int commentCount,
         String authorName,

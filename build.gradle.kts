@@ -28,7 +28,7 @@ repositories {
     mavenCentral()
 }
 
-extra["snippetsDir"] = file("build/generated-snippets")
+val snippetsDir = layout.buildDirectory.dir("generated-snippets")
 
 checkstyle {
     toolVersion = "10.18.2"
@@ -53,7 +53,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.flywaydb:flyway-mysql")
@@ -65,7 +64,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-restdocs")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-client-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
@@ -75,6 +73,7 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("spring.profiles.active", "test")
 }
 
 tasks.withType<org.gradle.api.plugins.quality.Checkstyle>().configureEach {
@@ -135,10 +134,10 @@ tasks.named("check") {
 }
 
 tasks.test {
-    outputs.dir(project.extra["snippetsDir"]!!)
+    outputs.dir(snippetsDir)
 }
 
-tasks.asciidoctor {
-    inputs.dir(project.extra["snippetsDir"]!!)
+tasks.named("asciidoctor") {
+    inputs.dir(snippetsDir)
     dependsOn(tasks.test)
 }

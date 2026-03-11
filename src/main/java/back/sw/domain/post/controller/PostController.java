@@ -11,16 +11,20 @@ import back.sw.global.response.RsData;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/posts")
@@ -33,13 +37,14 @@ public class PostController {
     private final PostService postService;
     private final AuthService authService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RsData<PostCreateResponse>> create(
             @RequestHeader("Authorization") String authorization,
-            @Valid @RequestBody PostCreateRequest request
+            @Valid @RequestPart("post") PostCreateRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
         int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
-        PostCreateResponse data = postService.create(memberId, request);
+        PostCreateResponse data = postService.create(memberId, request, images);
 
         return ResponseEntity.status(201)
                 .body(new RsData<>("201-1", "게시글이 작성되었습니다.", data));

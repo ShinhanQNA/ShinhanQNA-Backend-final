@@ -5,10 +5,13 @@ import back.sw.domain.member.repository.MemberRepository;
 import back.sw.domain.post.dto.request.PostCreateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
+import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.dto.response.PostSummaryResponse;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.entity.Post;
+import back.sw.domain.post.entity.PostViewHistory;
 import back.sw.domain.post.repository.PostRepository;
+import back.sw.domain.post.repository.PostViewHistoryRepository;
 import back.sw.global.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,12 +32,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PostServiceTest {
     @Mock
     private PostRepository postRepository;
+
+    @Mock
+    private PostViewHistoryRepository postViewHistoryRepository;
 
     @Mock
     private MemberRepository memberRepository;
@@ -76,16 +83,18 @@ class PostServiceTest {
         when(postRepository.findByBoardTypeAndDeletedFalse(eq(BoardType.FREE), any()))
                 .thenReturn(new PageImpl<>(List.of(latest, old), PageRequest.of(0, 20), 2));
 
-        List<PostSummaryResponse> response = postService.getList(BoardType.FREE, 0, 20);
+        PostPageResponse response = postService.getList(BoardType.FREE, 0, 20);
 
-        assertEquals(2, response.size());
-        assertEquals("최신 글", response.get(0).title());
-        assertEquals("익명", response.get(0).authorName());
-        assertEquals("오래된 글", response.get(1).title());
+        List<PostSummaryResponse> items = response.items();
+        assertEquals(2, items.size());
+        assertEquals("최신 글", items.get(0).title());
+        assertEquals("익명", items.get(0).authorName());
+        assertEquals("오래된 글", items.get(1).title());
+        assertEquals(2, response.totalElements());
     }
 
     @Test
-    void getDetailIncreasesViewCount() {
+    void getDetailIncreasesViewCountOnFirstView() {
         Member member = Member.join("user3@univ.ac.kr", "20250003", "encoded", "nick3");
         ReflectionTestUtils.setField(member, "id", 3);
 
@@ -93,11 +102,34 @@ class PostServiceTest {
         ReflectionTestUtils.setField(post, "id", 10);
 
         when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(postViewHistoryRepository.findByPostIdAndViewerKey(10, "MEMBER:3")).thenReturn(Optional.empty());
 
-        PostDetailResponse response = postService.getDetail(10);
+        PostDetailResponse response = postService.getDetail(10, 3, "127.0.0.1");
 
         assertEquals(1, response.viewCount());
         assertEquals("익명", response.authorName());
+        verify(postViewHistoryRepository).save(any());
+    }
+
+    @Test
+    void getDetailDoesNotIncreaseViewCountWithinCooldown() {
+        Member member = Member.join("user4@univ.ac.kr", "20250004", "encoded", "nick4");
+        ReflectionTestUtils.setField(member, "id", 4);
+
+        Post post = Post.create(member, BoardType.QNA, "질문", "질문 내용");
+        ReflectionTestUtils.setField(post, "id", 11);
+
+        when(postRepository.findByIdAndDeletedFalse(11)).thenReturn(Optional.of(post));
+        when(postViewHistoryRepository.findByPostIdAndViewerKey(11, "MEMBER:4"))
+                .thenReturn(Optional.of(PostViewHistory.firstView(
+                        11,
+                        "MEMBER:4",
+                        LocalDateTime.now().minusMinutes(10)
+                )));
+
+        PostDetailResponse response = postService.getDetail(11, 4, "127.0.0.1");
+
+        assertEquals(0, response.viewCount());
     }
 
     @Test

@@ -66,14 +66,6 @@ public class AuthService {
         return jwtTokenProvider.getMemberId(accessToken);
     }
 
-    public Integer getOptionalMemberIdFromAuthorizationHeader(String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isBlank()) {
-            return null;
-        }
-
-        return getMemberIdFromAuthorizationHeader(authorizationHeader);
-    }
-
     private Member getMemberByRefreshToken(String refreshToken) {
         int memberId = jwtTokenProvider.getMemberId(refreshToken);
 

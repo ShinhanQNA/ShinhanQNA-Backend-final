@@ -139,22 +139,4 @@ class AuthServiceTest {
 
         assertEquals(10, memberId);
     }
-
-    @Test
-    void getOptionalMemberIdFromAuthorizationHeaderReturnsNullWhenHeaderMissing() {
-        Integer memberId = authService.getOptionalMemberIdFromAuthorizationHeader(null);
-
-        assertNull(memberId);
-        verifyNoInteractions(bearerTokenResolver, jwtTokenProvider);
-    }
-
-    @Test
-    void getOptionalMemberIdFromAuthorizationHeaderSuccess() {
-        when(bearerTokenResolver.resolve("Bearer optional-token")).thenReturn("optional-token");
-        when(jwtTokenProvider.getMemberId("optional-token")).thenReturn(33);
-
-        Integer memberId = authService.getOptionalMemberIdFromAuthorizationHeader("Bearer optional-token");
-
-        assertEquals(33, memberId);
-    }
 }

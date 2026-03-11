@@ -4,5 +4,9 @@ public enum BoardType {
     FREE,
     PROJECT_RECRUIT,
     STUDY_RECRUIT,
-    QNA
+    QNA;
+
+    public boolean isRecruitBoard() {
+        return this == PROJECT_RECRUIT || this == STUDY_RECRUIT;
+    }
 }

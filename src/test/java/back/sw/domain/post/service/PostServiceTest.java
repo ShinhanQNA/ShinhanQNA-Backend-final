@@ -9,9 +9,7 @@ import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.dto.response.PostSummaryResponse;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.entity.Post;
-import back.sw.domain.post.entity.PostViewHistory;
 import back.sw.domain.post.repository.PostRepository;
-import back.sw.domain.post.repository.PostViewHistoryRepository;
 import back.sw.global.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,16 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PostServiceTest {
     @Mock
     private PostRepository postRepository;
-
-    @Mock
-    private PostViewHistoryRepository postViewHistoryRepository;
 
     @Mock
     private MemberRepository memberRepository;
@@ -94,7 +88,7 @@ class PostServiceTest {
     }
 
     @Test
-    void getDetailIncreasesViewCountOnFirstView() {
+    void getDetailReturnsPostData() {
         Member member = Member.join("user3@univ.ac.kr", "20250003", "encoded", "nick3");
         ReflectionTestUtils.setField(member, "id", 3);
 
@@ -102,34 +96,11 @@ class PostServiceTest {
         ReflectionTestUtils.setField(post, "id", 10);
 
         when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
-        when(postViewHistoryRepository.findByPostIdAndViewerKey(10, "MEMBER:3")).thenReturn(Optional.empty());
 
-        PostDetailResponse response = postService.getDetail(10, 3, "127.0.0.1");
+        PostDetailResponse response = postService.getDetail(10);
 
-        assertEquals(1, response.viewCount());
+        assertEquals("질문", response.title());
         assertEquals("익명", response.authorName());
-        verify(postViewHistoryRepository).save(any());
-    }
-
-    @Test
-    void getDetailDoesNotIncreaseViewCountWithinCooldown() {
-        Member member = Member.join("user4@univ.ac.kr", "20250004", "encoded", "nick4");
-        ReflectionTestUtils.setField(member, "id", 4);
-
-        Post post = Post.create(member, BoardType.QNA, "질문", "질문 내용");
-        ReflectionTestUtils.setField(post, "id", 11);
-
-        when(postRepository.findByIdAndDeletedFalse(11)).thenReturn(Optional.of(post));
-        when(postViewHistoryRepository.findByPostIdAndViewerKey(11, "MEMBER:4"))
-                .thenReturn(Optional.of(PostViewHistory.firstView(
-                        11,
-                        "MEMBER:4",
-                        LocalDateTime.now().minusMinutes(10)
-                )));
-
-        PostDetailResponse response = postService.getDetail(11, 4, "127.0.0.1");
-
-        assertEquals(0, response.viewCount());
     }
 
     @Test

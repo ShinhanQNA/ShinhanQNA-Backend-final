@@ -58,6 +58,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.flywaydb:flyway-mysql")
     compileOnly("org.projectlombok:lombok")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.8")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("com.h2database:h2")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.7")

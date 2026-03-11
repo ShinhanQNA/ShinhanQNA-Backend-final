@@ -48,9 +48,11 @@ class LikeServiceTest {
         when(memberRepository.findById(2)).thenReturn(Optional.of(liker));
         when(postLikeRepository.findByPostIdAndMemberId(10, 2)).thenReturn(Optional.empty());
         when(postLikeRepository.save(any(PostLike.class))).thenReturn(PostLike.create(post, liker));
+        when(postRepository.findLikeCountByIdAndDeletedFalse(10)).thenReturn(Optional.of(1));
 
         LikeToggleResponse response = likeService.toggle(2, 10);
 
+        verify(postRepository).incrementLikeCount(10);
         assertEquals(true, response.liked());
         assertEquals(1, response.likeCount());
     }
@@ -60,16 +62,16 @@ class LikeServiceTest {
         Member writer = createMember(1, "writer@univ.ac.kr", "20252001", "writer");
         Member liker = createMember(2, "liker@univ.ac.kr", "20252002", "liker");
         Post post = createPost(10, writer, "좋아요", "본문");
-        ReflectionTestUtils.setField(post, "likeCount", 1);
-
         PostLike existing = PostLike.create(post, liker);
         when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
         when(memberRepository.findById(2)).thenReturn(Optional.of(liker));
         when(postLikeRepository.findByPostIdAndMemberId(10, 2)).thenReturn(Optional.of(existing));
+        when(postRepository.findLikeCountByIdAndDeletedFalse(10)).thenReturn(Optional.of(0));
 
         LikeToggleResponse response = likeService.toggle(2, 10);
 
         verify(postLikeRepository).delete(existing);
+        verify(postRepository).decrementLikeCount(10);
         assertEquals(false, response.liked());
         assertEquals(0, response.likeCount());
     }

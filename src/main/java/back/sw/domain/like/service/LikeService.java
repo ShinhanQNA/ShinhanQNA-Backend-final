@@ -34,16 +34,21 @@ public class LikeService {
         Optional<PostLike> existing = postLikeRepository.findByPostIdAndMemberId(postId, memberId);
         if (existing.isPresent()) {
             postLikeRepository.delete(existing.get());
-            post.decreaseLikeCount();
-            return new LikeToggleResponse(false, post.getLikeCount());
+            postRepository.decrementLikeCount(postId);
+            return new LikeToggleResponse(false, getCurrentLikeCount(postId));
         }
 
         try {
             postLikeRepository.save(PostLike.create(post, member));
-            post.increaseLikeCount();
-            return new LikeToggleResponse(true, post.getLikeCount());
+            postRepository.incrementLikeCount(postId);
+            return new LikeToggleResponse(true, getCurrentLikeCount(postId));
         } catch (DataIntegrityViolationException ex) {
             throw new ServiceException("409-1", "좋아요 처리 중 충돌이 발생했습니다. 다시 시도해 주세요.");
         }
+    }
+
+    private int getCurrentLikeCount(int postId) {
+        return postRepository.findLikeCountByIdAndDeletedFalse(postId)
+                .orElseThrow(() -> new ServiceException("404-1", "게시글을 찾을 수 없습니다."));
     }
 }

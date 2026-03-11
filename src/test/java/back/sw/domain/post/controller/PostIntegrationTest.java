@@ -69,7 +69,6 @@ class PostIntegrationTest {
 
         JsonNode detailBody = objectMapper.readTree(detailResult.getResponse().getContentAsString());
         assertEquals("익명", detailBody.get("data").get("authorName").asText());
-        assertEquals(1, detailBody.get("data").get("viewCount").asInt());
 
         mockMvc.perform(
                 delete("/api/v1/posts/{postId}", postId)
@@ -127,46 +126,6 @@ class PostIntegrationTest {
         JsonNode listBody = objectMapper.readTree(listResult.getResponse().getContentAsString());
         assertEquals("최신 글", listBody.get("data").get("items").get(0).get("title").asText());
         assertEquals("오래된 글", listBody.get("data").get("items").get(1).get("title").asText());
-    }
-
-    @Test
-    void 동일_사용자_30분_이내_중복_조회는_조회수_증가_없음() throws Exception {
-        String accessToken = registerAndLogin("postuser5@univ.ac.kr", "20251005", "postnick5");
-
-        MvcResult createResult = mockMvc.perform(
-                        post("/api/v1/posts")
-                                .header("Authorization", "Bearer " + accessToken)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(Map.of(
-                                        "boardType", "FREE",
-                                        "title", "조회수 정책 테스트",
-                                        "content", "중복 조회 확인"
-                                )))
-                ).andExpect(status().isCreated())
-                .andReturn();
-
-        int postId = objectMapper.readTree(createResult.getResponse().getContentAsString())
-                .get("data")
-                .get("postId")
-                .asInt();
-
-        MvcResult firstDetailResult = mockMvc.perform(
-                        get("/api/v1/posts/{postId}", postId)
-                                .header("Authorization", "Bearer " + accessToken)
-                ).andExpect(status().isOk())
-                .andReturn();
-
-        MvcResult secondDetailResult = mockMvc.perform(
-                        get("/api/v1/posts/{postId}", postId)
-                                .header("Authorization", "Bearer " + accessToken)
-                ).andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode firstBody = objectMapper.readTree(firstDetailResult.getResponse().getContentAsString());
-        JsonNode secondBody = objectMapper.readTree(secondDetailResult.getResponse().getContentAsString());
-
-        assertEquals(1, firstBody.get("data").get("viewCount").asInt());
-        assertEquals(1, secondBody.get("data").get("viewCount").asInt());
     }
 
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {

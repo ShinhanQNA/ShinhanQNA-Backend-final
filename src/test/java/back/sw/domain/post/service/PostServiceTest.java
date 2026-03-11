@@ -12,6 +12,10 @@ import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.entity.PostImage;
 import back.sw.domain.post.repository.PostImageRepository;
 import back.sw.domain.post.repository.PostRepository;
+import back.sw.domain.recruitment.dto.request.RecruitmentCreateRequest;
+import back.sw.domain.recruitment.dto.response.RecruitmentDetailResponse;
+import back.sw.domain.recruitment.entity.RecruitStatus;
+import back.sw.domain.recruitment.service.RecruitmentService;
 import back.sw.global.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +58,9 @@ class PostServiceTest {
     @Mock
     private PostImageStorageService postImageStorageService;
 
+    @Mock
+    private RecruitmentService recruitmentService;
+
     @InjectMocks
     private PostService postService;
 
@@ -60,7 +69,7 @@ class PostServiceTest {
         Member member = Member.join("user1@univ.ac.kr", "20250001", "encoded", "nick1");
         ReflectionTestUtils.setField(member, "id", 1);
 
-        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용");
+        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용", null);
 
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
         when(postRepository.save(any(Post.class))).thenAnswer(invocation -> {
@@ -79,7 +88,7 @@ class PostServiceTest {
         Member member = Member.join("user1@univ.ac.kr", "20250001", "encoded", "nick1");
         ReflectionTestUtils.setField(member, "id", 1);
 
-        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용");
+        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용", null);
         List<MockMultipartFile> images = List.of(
                 createImage("a.png", "image-a"),
                 createImage("b.png", "image-b")
@@ -106,7 +115,7 @@ class PostServiceTest {
 
     @Test
     void createFailsWhenImageCountExceedsLimit() {
-        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용");
+        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "제목", "내용", null);
         List<MockMultipartFile> images = List.of(
                 createImage("1.png", "1"),
                 createImage("2.png", "2"),
@@ -123,6 +132,52 @@ class PostServiceTest {
 
         assertEquals("400-1", exception.getRsData().resultCode());
         assertEquals("이미지는 최대 5개까지 업로드할 수 있습니다.", exception.getRsData().msg());
+    }
+
+    @Test
+    void createRecruitPostFailsWhenRecruitmentMissing() {
+        PostCreateRequest request = new PostCreateRequest(BoardType.PROJECT_RECRUIT, "모집", "내용", null);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> postService.create(1, request, List.of())
+        );
+
+        assertEquals("400-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void createFreePostFailsWhenRecruitmentProvided() {
+        RecruitmentCreateRequest recruitment = new RecruitmentCreateRequest(4, "오픈채팅", LocalDate.of(2026, 3, 20));
+        PostCreateRequest request = new PostCreateRequest(BoardType.FREE, "자유글", "내용", recruitment);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> postService.create(1, request, List.of())
+        );
+
+        assertEquals("400-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void createRecruitPostSuccessWithRecruitment() {
+        Member member = Member.join("recruit3@univ.ac.kr", "20250008", "encoded", "nick8");
+        ReflectionTestUtils.setField(member, "id", 1);
+
+        RecruitmentCreateRequest recruitment = new RecruitmentCreateRequest(6, "이메일", LocalDate.of(2026, 3, 25));
+        PostCreateRequest request = new PostCreateRequest(BoardType.STUDY_RECRUIT, "스터디 모집", "내용", recruitment);
+
+        when(memberRepository.findById(1)).thenReturn(Optional.of(member));
+        when(postRepository.save(any(Post.class))).thenAnswer(invocation -> {
+            Post saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 110);
+            return saved;
+        });
+
+        PostCreateResponse response = postService.create(1, request, List.of());
+
+        assertEquals(110, response.postId());
+        verify(recruitmentService).createForPost(any(Post.class), eq(recruitment));
     }
 
     @Test
@@ -164,6 +219,7 @@ class PostServiceTest {
                         PostImage.create(post, "/uploads/1.png", 0),
                         PostImage.create(post, "/uploads/2.png", 1)
                 ));
+        when(recruitmentService.getDetailResponseByPostId(10)).thenReturn(Optional.empty());
 
         PostDetailResponse response = postService.getDetail(10);
 
@@ -172,6 +228,33 @@ class PostServiceTest {
         assertEquals(2, response.imageUrls().size());
         assertEquals("/uploads/1.png", response.imageUrls().get(0));
         assertEquals("/uploads/2.png", response.imageUrls().get(1));
+        assertTrue(response.recruitment() == null);
+    }
+
+    @Test
+    void getDetailReturnsRecruitmentDataWhenRecruitBoard() {
+        Member member = Member.join("user6@univ.ac.kr", "20250009", "encoded", "nick9");
+        ReflectionTestUtils.setField(member, "id", 6);
+
+        Post post = Post.create(member, BoardType.PROJECT_RECRUIT, "프로젝트 모집", "내용");
+        ReflectionTestUtils.setField(post, "id", 11);
+        RecruitmentDetailResponse recruitment = new RecruitmentDetailResponse(
+                5,
+                0,
+                "오픈채팅",
+                RecruitStatus.OPEN,
+                LocalDate.of(2026, 3, 30)
+        );
+
+        when(postRepository.findByIdAndDeletedFalse(11)).thenReturn(Optional.of(post));
+        when(postImageRepository.findByPostIdOrderBySortOrderAsc(11)).thenReturn(List.of());
+        when(recruitmentService.getDetailResponseByPostId(11)).thenReturn(Optional.of(recruitment));
+
+        PostDetailResponse response = postService.getDetail(11);
+
+        assertEquals("프로젝트 모집", response.title());
+        assertEquals(RecruitStatus.OPEN, response.recruitment().recruitStatus());
+        assertEquals(5, response.recruitment().capacity());
     }
 
     @Test
@@ -191,6 +274,7 @@ class PostServiceTest {
 
         assertEquals("403-1", exception.getRsData().resultCode());
         assertFalse(post.isDeleted());
+        verify(recruitmentService, never()).createForPost(any(Post.class), any(RecruitmentCreateRequest.class));
     }
 
     @Test

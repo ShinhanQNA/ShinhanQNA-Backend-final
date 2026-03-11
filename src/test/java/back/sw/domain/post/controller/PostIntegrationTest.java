@@ -15,6 +15,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -148,6 +149,70 @@ class PostIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void 모집게시판_작성시_모집정보가_없으면_400() throws Exception {
+        String accessToken = registerAndLogin("postuser6@univ.ac.kr", "20251006", "postnick6");
+
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart("PROJECT_RECRUIT", "모집글", "모집 내용", null))
+                .header("Authorization", "Bearer " + accessToken);
+
+        mockMvc.perform(requestBuilder).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 자유게시판_작성시_모집정보를_보내면_400() throws Exception {
+        String accessToken = registerAndLogin("postuser7@univ.ac.kr", "20251007", "postnick7");
+
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart(
+                        "FREE",
+                        "자유글",
+                        "내용",
+                        Map.of(
+                                "capacity", 4,
+                                "contactMethod", "오픈채팅",
+                                "deadline", "2026-03-20"
+                        )
+                ))
+                .header("Authorization", "Bearer " + accessToken);
+
+        mockMvc.perform(requestBuilder).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 모집게시글_작성후_상세조회시_모집정보가_노출된다() throws Exception {
+        String accessToken = registerAndLogin("postuser8@univ.ac.kr", "20251008", "postnick8");
+
+        MvcResult createResult = createPost(
+                accessToken,
+                "STUDY_RECRUIT",
+                "스터디 모집",
+                "자바 스터디",
+                List.of(),
+                Map.of(
+                        "capacity", 6,
+                        "contactMethod", "이메일",
+                        "deadline", "2026-03-25"
+                )
+        );
+
+        int postId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .get("data")
+                .get("postId")
+                .asInt();
+
+        MvcResult detailResult = mockMvc.perform(get("/api/v1/posts/{postId}", postId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode detailBody = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+        JsonNode recruitment = detailBody.get("data").get("recruitment");
+        assertEquals(6, recruitment.get("capacity").asInt());
+        assertEquals("이메일", recruitment.get("contactMethod").asText());
+        assertEquals("OPEN", recruitment.get("recruitStatus").asText());
+    }
+
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {
         mockMvc.perform(
                 post("/api/v1/members")
@@ -181,8 +246,19 @@ class PostIntegrationTest {
             String content,
             List<MockMultipartFile> images
     ) throws Exception {
+        return createPost(accessToken, boardType, title, content, images, null);
+    }
+
+    private MvcResult createPost(
+            String accessToken,
+            String boardType,
+            String title,
+            String content,
+            List<MockMultipartFile> images,
+            Map<String, Object> recruitment
+    ) throws Exception {
         MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
-                .file(createPostPart(boardType, title, content))
+                .file(createPostPart(boardType, title, content, recruitment))
                 .header("Authorization", "Bearer " + accessToken);
 
         for (MockMultipartFile image : images) {
@@ -195,15 +271,28 @@ class PostIntegrationTest {
     }
 
     private MockMultipartFile createPostPart(String boardType, String title, String content) throws Exception {
+        return createPostPart(boardType, title, content, null);
+    }
+
+    private MockMultipartFile createPostPart(
+            String boardType,
+            String title,
+            String content,
+            Map<String, Object> recruitment
+    ) throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("boardType", boardType);
+        payload.put("title", title);
+        payload.put("content", content);
+        if (recruitment != null) {
+            payload.put("recruitment", recruitment);
+        }
+
         return new MockMultipartFile(
                 "post",
                 "post.json",
                 MediaType.APPLICATION_JSON_VALUE,
-                objectMapper.writeValueAsBytes(Map.of(
-                        "boardType", boardType,
-                        "title", title,
-                        "content", content
-                ))
+                objectMapper.writeValueAsBytes(payload)
         );
     }
 

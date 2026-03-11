@@ -9,6 +9,8 @@ import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.dto.response.PostSummaryResponse;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.entity.Post;
+import back.sw.domain.post.entity.PostImage;
+import back.sw.domain.post.repository.PostImageRepository;
 import back.sw.domain.post.repository.PostRepository;
 import back.sw.global.exception.ServiceException;
 import back.sw.global.util.PageUtils;
@@ -18,23 +20,33 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
+    private static final int MAX_IMAGE_COUNT = 5;
+
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final PostImageRepository postImageRepository;
+    private final PostImageStorageService postImageStorageService;
 
     @Transactional
-    public PostCreateResponse create(int memberId, PostCreateRequest request) {
+    public PostCreateResponse create(int memberId, PostCreateRequest request, List<? extends MultipartFile> images) {
+        List<? extends MultipartFile> safeImages = normalizeImages(images);
+        validateImageCount(safeImages);
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException("404-1", "회원을 찾을 수 없습니다."));
 
         Post post = Post.create(member, request.boardType(), request.title(), request.content());
         postRepository.save(post);
+        savePostImages(post, safeImages);
 
         return new PostCreateResponse(post.getId());
     }
@@ -98,6 +110,11 @@ public class PostService {
     }
 
     private PostDetailResponse toDetailResponse(Post post) {
+        List<String> imageUrls = postImageRepository.findByPostIdOrderBySortOrderAsc(post.getId())
+                .stream()
+                .map(PostImage::getImageUrl)
+                .toList();
+
         return new PostDetailResponse(
                 post.getId(),
                 post.getBoardType(),
@@ -105,9 +122,33 @@ public class PostService {
                 post.getContent(),
                 post.getLikeCount(),
                 post.getCommentCount(),
+                imageUrls,
                 "익명",
                 post.getCreateDate(),
                 post.getModifyDate()
         );
+    }
+
+    private List<? extends MultipartFile> normalizeImages(List<? extends MultipartFile> images) {
+        return images == null ? List.of() : images;
+    }
+
+    private void validateImageCount(List<? extends MultipartFile> images) {
+        if (images.size() > MAX_IMAGE_COUNT) {
+            throw new ServiceException("400-1", "이미지는 최대 5개까지 업로드할 수 있습니다.");
+        }
+    }
+
+    private void savePostImages(Post post, List<? extends MultipartFile> images) {
+        if (images.isEmpty()) {
+            return;
+        }
+
+        List<String> imageUrls = postImageStorageService.store(images);
+        List<PostImage> postImages = IntStream.range(0, imageUrls.size())
+                .mapToObj(i -> PostImage.create(post, imageUrls.get(i), i))
+                .toList();
+
+        postImageRepository.saveAll(postImages);
     }
 }

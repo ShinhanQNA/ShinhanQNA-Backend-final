@@ -9,18 +9,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "post_likes",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uq_post_likes_post_user", columnNames = {"post_id", "user_id"})
-        }
-)
+@Table(name = "post_likes")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostLike {

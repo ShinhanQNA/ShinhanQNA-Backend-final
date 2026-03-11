@@ -6,17 +6,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,17 +41,16 @@ class PostIntegrationTest {
     void 게시글_작성_목록_상세_삭제_성공_흐름() throws Exception {
         String accessToken = registerAndLogin("postuser1@univ.ac.kr", "20251001", "postnick1");
 
-        MvcResult createResult = mockMvc.perform(
-                        post("/api/v1/posts")
-                                .header("Authorization", "Bearer " + accessToken)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(Map.of(
-                                        "boardType", "FREE",
-                                        "title", "첫 게시글",
-                                        "content", "게시글 내용"
-                                )))
-                ).andExpect(status().isCreated())
-                .andReturn();
+        MvcResult createResult = createPost(
+                accessToken,
+                "FREE",
+                "첫 게시글",
+                "게시글 내용",
+                List.of(
+                        createImagePart("first.png", "file-one"),
+                        createImagePart("second.png", "file-two")
+                )
+        );
 
         JsonNode createBody = objectMapper.readTree(createResult.getResponse().getContentAsString());
         int postId = createBody.get("data").get("postId").asInt();
@@ -69,6 +74,9 @@ class PostIntegrationTest {
 
         JsonNode detailBody = objectMapper.readTree(detailResult.getResponse().getContentAsString());
         assertEquals("익명", detailBody.get("data").get("authorName").asText());
+        assertEquals(2, detailBody.get("data").get("imageUrls").size());
+        assertTrue(detailBody.get("data").get("imageUrls").get(0).asText().startsWith("/uploads/"));
+        assertTrue(detailBody.get("data").get("imageUrls").get(1).asText().startsWith("/uploads/"));
 
         mockMvc.perform(
                 delete("/api/v1/posts/{postId}", postId)
@@ -85,17 +93,13 @@ class PostIntegrationTest {
         String writerToken = registerAndLogin("postuser2@univ.ac.kr", "20251002", "postnick2");
         String otherToken = registerAndLogin("postuser3@univ.ac.kr", "20251003", "postnick3");
 
-        MvcResult createResult = mockMvc.perform(
-                        post("/api/v1/posts")
-                                .header("Authorization", "Bearer " + writerToken)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(Map.of(
-                                        "boardType", "QNA",
-                                        "title", "삭제권한 테스트",
-                                        "content", "작성자만 삭제 가능"
-                                )))
-                ).andExpect(status().isCreated())
-                .andReturn();
+        MvcResult createResult = createPost(
+                writerToken,
+                "QNA",
+                "삭제권한 테스트",
+                "작성자만 삭제 가능",
+                List.of()
+        );
 
         int postId = objectMapper.readTree(createResult.getResponse().getContentAsString())
                 .get("data")
@@ -112,8 +116,8 @@ class PostIntegrationTest {
     void 게시글_목록은_최신순_정렬() throws Exception {
         String accessToken = registerAndLogin("postuser4@univ.ac.kr", "20251004", "postnick4");
 
-        createPost(accessToken, "FREE", "오래된 글", "first");
-        createPost(accessToken, "FREE", "최신 글", "second");
+        createPost(accessToken, "FREE", "오래된 글", "first", List.of());
+        createPost(accessToken, "FREE", "최신 글", "second", List.of());
 
         MvcResult listResult = mockMvc.perform(
                         get("/api/v1/posts")
@@ -126,6 +130,22 @@ class PostIntegrationTest {
         JsonNode listBody = objectMapper.readTree(listResult.getResponse().getContentAsString());
         assertEquals("최신 글", listBody.get("data").get("items").get(0).get("title").asText());
         assertEquals("오래된 글", listBody.get("data").get("items").get(1).get("title").asText());
+    }
+
+    @Test
+    void 게시글_작성시_이미지_6개_업로드면_400() throws Exception {
+        String accessToken = registerAndLogin("postuser5@univ.ac.kr", "20251005", "postnick5");
+
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart("FREE", "이미지 제한", "6개 업로드 테스트"))
+                .header("Authorization", "Bearer " + accessToken);
+
+        for (int i = 0; i < 6; i++) {
+            requestBuilder.file(createImagePart("img-" + i + ".png", "content-" + i));
+        }
+
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isBadRequest());
     }
 
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {
@@ -154,16 +174,45 @@ class PostIntegrationTest {
         return loginBody.get("data").get("accessToken").asText();
     }
 
-    private void createPost(String accessToken, String boardType, String title, String content) throws Exception {
-        mockMvc.perform(
-                post("/api/v1/posts")
-                        .header("Authorization", "Bearer " + accessToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "boardType", boardType,
-                                "title", title,
-                                "content", content
-                        )))
-        ).andExpect(status().isCreated());
+    private MvcResult createPost(
+            String accessToken,
+            String boardType,
+            String title,
+            String content,
+            List<MockMultipartFile> images
+    ) throws Exception {
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart(boardType, title, content))
+                .header("Authorization", "Bearer " + accessToken);
+
+        for (MockMultipartFile image : images) {
+            requestBuilder.file(image);
+        }
+
+        return mockMvc.perform(requestBuilder)
+                .andExpect(status().isCreated())
+                .andReturn();
+    }
+
+    private MockMultipartFile createPostPart(String boardType, String title, String content) throws Exception {
+        return new MockMultipartFile(
+                "post",
+                "post.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(Map.of(
+                        "boardType", boardType,
+                        "title", title,
+                        "content", content
+                ))
+        );
+    }
+
+    private MockMultipartFile createImagePart(String fileName, String content) {
+        return new MockMultipartFile(
+                "images",
+                fileName,
+                MediaType.IMAGE_PNG_VALUE,
+                content.getBytes(StandardCharsets.UTF_8)
+        );
     }
 }

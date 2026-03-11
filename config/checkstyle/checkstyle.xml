@@ -11,7 +11,13 @@
   </module>
 
   <module name="TreeWalker">
+    <module name="UnusedImports"/>
+    <module name="AvoidStarImport"/>
+    <module name="EmptyBlock"/>
     <module name="NeedBraces"/>
+    <module name="OneStatementPerLine"/>
+    <module name="NoWhitespaceBefore"/>
+    <module name="WhitespaceAfter"/>
     <module name="WhitespaceAround"/>
   </module>
 </module>

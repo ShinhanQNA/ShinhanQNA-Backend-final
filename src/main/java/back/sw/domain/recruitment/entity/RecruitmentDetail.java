@@ -10,7 +10,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,18 +17,13 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@Table(
-        name = "recruitment_details",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uq_recruitment_details_post", columnNames = {"post_id"})
-        }
-)
+@Table(name = "recruitment_details")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RecruitmentDetail extends BaseEntity {
     @Getter(AccessLevel.NONE)
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "post_id", nullable = false, unique = true)
     private Post post;
 
     @Column(nullable = false)

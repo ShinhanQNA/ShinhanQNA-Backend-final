@@ -35,9 +35,6 @@ public class Post extends BaseEntity {
     private String content;
 
     @Column(nullable = false)
-    private int viewCount;
-
-    @Column(nullable = false)
     private int likeCount;
 
     @Column(nullable = false)
@@ -51,7 +48,6 @@ public class Post extends BaseEntity {
         this.boardType = boardType;
         this.title = title;
         this.content = content;
-        this.viewCount = 0;
         this.likeCount = 0;
         this.commentCount = 0;
         this.deleted = false;
@@ -67,9 +63,5 @@ public class Post extends BaseEntity {
 
     public void softDelete() {
         this.deleted = true;
-    }
-
-    public void increaseViewCount() {
-        this.viewCount += 1;
     }
 }

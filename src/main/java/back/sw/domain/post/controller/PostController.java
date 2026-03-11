@@ -4,11 +4,12 @@ import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.post.dto.request.PostCreateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
-import back.sw.domain.post.dto.response.PostSummaryResponse;
+import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.service.PostService;
 import back.sw.global.response.RsData;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/posts")
@@ -48,19 +47,25 @@ public class PostController {
     }
 
     @GetMapping
-    public RsData<List<PostSummaryResponse>> getList(
+    public RsData<PostPageResponse> getList(
             @RequestParam BoardType boardType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        List<PostSummaryResponse> data = postService.getList(boardType, page, size);
+        PostPageResponse data = postService.getList(boardType, page, size);
 
         return new RsData<>("200-1", "게시글 목록을 조회했습니다.", data);
     }
 
     @GetMapping("/{postId}")
-    public RsData<PostDetailResponse> getDetail(@PathVariable int postId) {
-        PostDetailResponse data = postService.getDetail(postId);
+    public RsData<PostDetailResponse> getDetail(
+            @PathVariable int postId,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            HttpServletRequest request
+    ) {
+        Integer memberId = authService.getOptionalMemberIdFromAuthorizationHeader(authorization);
+        String clientIp = resolveClientIp(request);
+        PostDetailResponse data = postService.getDetail(postId, memberId, clientIp);
 
         return new RsData<>("200-1", "게시글을 조회했습니다.", data);
     }
@@ -74,5 +79,14 @@ public class PostController {
         postService.delete(memberId, postId);
 
         return new RsData<>("200-1", "게시글이 삭제되었습니다.", null);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
     }
 }

@@ -53,4 +53,20 @@ public class CommentReport extends BaseEntity {
     public static CommentReport create(Comment comment, Member member, ReportReason reason, String description) {
         return new CommentReport(comment, member, reason, description);
     }
+
+    public int commentId() {
+        return comment.getId();
+    }
+
+    public int postId() {
+        return comment.postId();
+    }
+
+    public int reporterId() {
+        return member.getId();
+    }
+
+    public boolean isCommentDeleted() {
+        return comment.isDeleted();
+    }
 }

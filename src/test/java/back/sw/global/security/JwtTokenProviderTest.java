@@ -12,14 +12,14 @@ class JwtTokenProviderTest {
     private static final String SECRET = "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789";
 
     @Test
-    void generateAndParseMemberId() {
+    void generateAndParseMemberIdFromAccessToken() {
         JwtTokenProvider jwtTokenProvider = new JwtTokenProvider(SECRET, 1800, 1209600);
         Member member = Member.join("user1@univ.ac.kr", "20250001", "encoded", "nick1");
         ReflectionTestUtils.setField(member, "id", 7);
 
         String token = jwtTokenProvider.generateAccessToken(member);
 
-        int memberId = jwtTokenProvider.getMemberId(token);
+        int memberId = jwtTokenProvider.getMemberIdFromAccessToken(token);
 
         assertEquals(7, memberId);
     }
@@ -30,7 +30,7 @@ class JwtTokenProviderTest {
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
-                () -> jwtTokenProvider.getMemberId("not-a-jwt")
+                () -> jwtTokenProvider.getMemberIdFromAccessToken("not-a-jwt")
         );
 
         assertEquals("401-1", exception.getRsData().resultCode());
@@ -46,7 +46,23 @@ class JwtTokenProviderTest {
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
-                () -> jwtTokenProvider.getMemberId(token)
+                () -> jwtTokenProvider.getMemberIdFromAccessToken(token)
+        );
+
+        assertEquals("401-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void rejectsRefreshTokenWhenUsedAsAccessToken() {
+        JwtTokenProvider jwtTokenProvider = new JwtTokenProvider(SECRET, 1800, 1209600);
+        Member member = Member.join("user3@univ.ac.kr", "20250003", "encoded", "nick3");
+        ReflectionTestUtils.setField(member, "id", 11);
+
+        String refreshToken = jwtTokenProvider.generateRefreshToken(member);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> jwtTokenProvider.getMemberIdFromAccessToken(refreshToken)
         );
 
         assertEquals("401-1", exception.getRsData().resultCode());

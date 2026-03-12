@@ -1,0 +1,78 @@
+package back.sw.global.security;
+
+import back.sw.global.exception.ServiceException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final String INVALID_TOKEN_MESSAGE = "유효하지 않은 토큰입니다.";
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final BearerTokenResolver bearerTokenResolver;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            String accessToken = bearerTokenResolver.resolve(authorizationHeader);
+            int memberId = jwtTokenProvider.getMemberId(accessToken);
+
+            AuthenticatedMember authenticatedMember = new AuthenticatedMember(memberId);
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(authenticatedMember, null, List.of());
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            filterChain.doFilter(request, response);
+        } catch (ServiceException exception) {
+            SecurityContextHolder.clearContext();
+            request.setAttribute(RestAuthenticationEntryPoint.ERROR_CODE_ATTRIBUTE, "401-1");
+            request.setAttribute(
+                    RestAuthenticationEntryPoint.ERROR_MESSAGE_ATTRIBUTE,
+                    normalizeErrorMessage(exception)
+            );
+            authenticationEntryPoint.commence(
+                    request,
+                    response,
+                    new InsufficientAuthenticationException(exception.getRsData().msg(), exception)
+            );
+        }
+    }
+
+    private String normalizeErrorMessage(ServiceException exception) {
+        String message = exception.getRsData().msg();
+        if (message == null || message.isBlank()) {
+            return INVALID_TOKEN_MESSAGE;
+        }
+
+        if ("만료된 토큰입니다.".equals(message)) {
+            return message;
+        }
+
+        return INVALID_TOKEN_MESSAGE;
+    }
+}

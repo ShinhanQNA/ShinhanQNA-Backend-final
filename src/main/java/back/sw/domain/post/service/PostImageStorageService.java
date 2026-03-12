@@ -1,6 +1,8 @@
 package back.sw.domain.post.service;
 
 import back.sw.global.exception.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +18,7 @@ import java.util.UUID;
 @Service
 public class PostImageStorageService {
     private static final String UPLOAD_URL_PREFIX = "/uploads/";
+    private static final Logger log = LoggerFactory.getLogger(PostImageStorageService.class);
 
     private final Path uploadPath;
 
@@ -99,7 +102,7 @@ public class PostImageStorageService {
         try {
             Files.deleteIfExists(targetPath);
         } catch (IOException e) {
-            throw new ServiceException("500-1", "이미지 삭제 중 오류가 발생했습니다.");
+            log.warn("이미지 삭제에 실패했습니다. imageUrl={}, path={}", imageUrl, targetPath, e);
         }
     }
 }

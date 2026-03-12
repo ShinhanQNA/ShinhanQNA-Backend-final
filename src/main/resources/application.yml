@@ -35,7 +35,7 @@ file:
 
 custom:
   jwt:
-    secret-key: ${CUSTOM_JWT_SECRET_KEY:abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789}
+    secret-key: ${CUSTOM_JWT_SECRET_KEY}
     access-token-expiration-seconds: ${CUSTOM_JWT_ACCESS_EXPIRATION_SECONDS:1800}
     refresh-token-expiration-seconds: ${CUSTOM_JWT_REFRESH_EXPIRATION_SECONDS:1209600}
   cors:

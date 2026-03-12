@@ -96,6 +96,58 @@ class CommentServiceTest {
     }
 
     @Test
+    void createReplyWithParentCommentSuccess() {
+        Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
+        Member replier = createMember(2, "user@univ.ac.kr", "20250002", "user");
+        Post post = createPost(10, postWriter, "제목", "내용");
+
+        CommentAnonymousProfile writerProfile = CommentAnonymousProfile.create(post, postWriter, 1);
+        Comment parentComment = Comment.create(post, postWriter, writerProfile, "부모 댓글");
+        ReflectionTestUtils.setField(parentComment, "id", 50);
+
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(memberRepository.findById(2)).thenReturn(Optional.of(replier));
+        when(commentRepository.findByIdAndPostId(50, 10)).thenReturn(Optional.of(parentComment));
+        when(commentAnonymousProfileRepository.findByPostIdAndMemberId(10, 2)).thenReturn(Optional.empty());
+        when(commentAnonymousProfileRepository.findTopByPostIdOrderByAnonymousNoDesc(10))
+                .thenReturn(Optional.of(writerProfile));
+        when(commentAnonymousProfileRepository.save(any(CommentAnonymousProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(commentRepository.save(any(Comment.class))).thenAnswer(invocation -> {
+            Comment saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 101);
+            return saved;
+        });
+
+        CommentCreateResponse response = commentService.create(2, 10, new CommentCreateRequest("대댓글", 50));
+
+        assertEquals(101, response.commentId());
+        assertEquals(1, post.getCommentCount());
+        ArgumentCaptor<Comment> captor = ArgumentCaptor.forClass(Comment.class);
+        verify(commentRepository).save(captor.capture());
+        assertEquals(50, captor.getValue().parentId());
+    }
+
+    @Test
+    void createReplyFailsWhenParentNotFound() {
+        Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
+        Member replier = createMember(2, "user@univ.ac.kr", "20250002", "user");
+        Post post = createPost(10, postWriter, "제목", "내용");
+
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(memberRepository.findById(2)).thenReturn(Optional.of(replier));
+        when(commentRepository.findByIdAndPostId(999, 10)).thenReturn(Optional.empty());
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> commentService.create(2, 10, new CommentCreateRequest("대댓글", 999))
+        );
+
+        assertEquals("404-1", exception.getRsData().resultCode());
+        assertEquals("부모 댓글을 찾을 수 없습니다.", exception.getRsData().msg());
+    }
+
+    @Test
     void getListReturnsAnonymousLabelAndPostAuthorBadge() {
         Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
         Member otherMember = createMember(2, "user@univ.ac.kr", "20250002", "user");

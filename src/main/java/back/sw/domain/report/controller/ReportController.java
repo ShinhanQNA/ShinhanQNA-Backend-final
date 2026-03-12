@@ -1,18 +1,18 @@
 package back.sw.domain.report.controller;
 
-import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.report.dto.request.ReportCreateRequest;
 import back.sw.domain.report.dto.response.ReportCreateResponse;
 import back.sw.domain.report.service.ReportService;
 import back.sw.global.response.RsData;
+import back.sw.global.security.AuthenticatedMember;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,15 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class ReportController {
     private final ReportService reportService;
-    private final AuthService authService;
 
     @PostMapping("/posts/{postId}/reports")
     public ResponseEntity<RsData<ReportCreateResponse>> createPostReport(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId,
             @Valid @RequestBody ReportCreateRequest request
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         ReportCreateResponse data = reportService.createPostReport(memberId, postId, request);
 
         return ResponseEntity.status(201)
@@ -42,11 +41,11 @@ public class ReportController {
 
     @PostMapping("/comments/{commentId}/reports")
     public ResponseEntity<RsData<ReportCreateResponse>> createCommentReport(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int commentId,
             @Valid @RequestBody ReportCreateRequest request
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         ReportCreateResponse data = reportService.createCommentReport(memberId, commentId, request);
 
         return ResponseEntity.status(201)

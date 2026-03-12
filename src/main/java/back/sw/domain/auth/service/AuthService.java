@@ -59,7 +59,7 @@ public class AuthService {
     }
 
     private Member getMemberByRefreshToken(String refreshToken) {
-        int memberId = jwtTokenProvider.getMemberId(refreshToken);
+        int memberId = jwtTokenProvider.getMemberIdFromRefreshToken(refreshToken);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException("401-1", INVALID_TOKEN_MESSAGE));

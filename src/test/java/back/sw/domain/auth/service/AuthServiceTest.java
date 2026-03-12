@@ -73,7 +73,7 @@ class AuthServiceTest {
         Member member = Member.join("user3@univ.ac.kr", "20250003", "encoded-password", "nick3");
         member.updateRefreshToken("refresh-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
         when(jwtTokenProvider.generateAccessToken(member)).thenReturn("new-access-token");
 
@@ -87,7 +87,7 @@ class AuthServiceTest {
         Member member = Member.join("user4@univ.ac.kr", "20250004", "encoded-password", "nick4");
         member.updateRefreshToken("another-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
 
         ServiceException exception = assertThrows(
@@ -103,7 +103,7 @@ class AuthServiceTest {
         Member member = Member.join("user5@univ.ac.kr", "20250005", "encoded-password", "nick5");
         member.updateRefreshToken("refresh-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
 
         authService.logout(new LogoutRequest("refresh-token"));

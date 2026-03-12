@@ -8,6 +8,7 @@ import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.dto.response.PostSummaryResponse;
+import back.sw.domain.post.event.PostDeletedEvent;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.entity.PostImage;
@@ -24,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -61,6 +63,9 @@ class PostServiceTest {
 
     @Mock
     private RecruitmentService recruitmentService;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private PostService postService;
@@ -276,6 +281,7 @@ class PostServiceTest {
         assertEquals("403-1", exception.getRsData().resultCode());
         assertFalse(post.isDeleted());
         verify(recruitmentService, never()).createForPost(any(Post.class), any(RecruitmentCreateRequest.class));
+        verify(applicationEventPublisher, never()).publishEvent(any(PostDeletedEvent.class));
     }
 
     @Test
@@ -325,6 +331,9 @@ class PostServiceTest {
         postService.delete(5, 21);
 
         assertTrue(post.isDeleted());
+        ArgumentCaptor<PostDeletedEvent> captor = ArgumentCaptor.forClass(PostDeletedEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertEquals(21, captor.getValue().postId());
     }
 
     private MockMultipartFile createImage(String fileName, String content) {

@@ -100,6 +100,42 @@ class PostIntegrationTest {
     }
 
     @Test
+    void 게시글_작성_요청은_리프레시토큰이면_401() throws Exception {
+        mockMvc.perform(
+                post("/api/v1/members")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "email", "postuser15@univ.ac.kr",
+                                "studentNumber", "20251025",
+                                "password", "password1234",
+                                "nickname", "postnick15"
+                        )))
+        ).andExpect(status().isCreated());
+
+        MvcResult loginResult = mockMvc.perform(
+                        post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(Map.of(
+                                        "email", "postuser15@univ.ac.kr",
+                                        "password", "password1234"
+                                )))
+                ).andExpect(status().isOk())
+                .andReturn();
+
+        String refreshToken = objectMapper.readTree(loginResult.getResponse().getContentAsString())
+                .get("data")
+                .get("refreshToken")
+                .asText();
+
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart("FREE", "리프레시 토큰", "인증 실패"))
+                .header("Authorization", "Bearer " + refreshToken);
+
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void 비작성자_삭제_요청은_403() throws Exception {
         String writerToken = registerAndLogin("postuser2@univ.ac.kr", "20251002", "postnick2");
         String otherToken = registerAndLogin("postuser3@univ.ac.kr", "20251003", "postnick3");

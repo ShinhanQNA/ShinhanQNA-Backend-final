@@ -54,6 +54,21 @@ class PostImageStorageServiceTest {
         assertEquals("400-1", exception.getRsData().resultCode());
     }
 
+    @Test
+    void deleteAllRemovesStoredFiles() throws Exception {
+        PostImageStorageService storageService = new PostImageStorageService(tempDir.toString());
+        List<MockMultipartFile> images = List.of(
+                createImage("c.png", "image-c"),
+                createImage("d.png", "image-d")
+        );
+        List<String> urls = storageService.store(images);
+
+        storageService.deleteAll(urls);
+
+        assertTrue(Files.notExists(tempDir.resolve(extractFileName(urls.get(0)))));
+        assertTrue(Files.notExists(tempDir.resolve(extractFileName(urls.get(1)))));
+    }
+
     private MockMultipartFile createImage(String fileName, String content) {
         return new MockMultipartFile(
                 "images",

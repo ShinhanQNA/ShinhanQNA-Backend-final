@@ -41,6 +41,12 @@ public class PostImageStorageService {
         return urls;
     }
 
+    public void deleteAll(List<String> imageUrls) {
+        for (String imageUrl : imageUrls) {
+            deleteIfExists(imageUrl);
+        }
+    }
+
     private void createUploadDirectoryIfAbsent() {
         try {
             Files.createDirectories(uploadPath);
@@ -72,6 +78,28 @@ public class PostImageStorageService {
             image.transferTo(targetPath);
         } catch (IOException e) {
             throw new ServiceException("500-1", "이미지 저장 중 오류가 발생했습니다.");
+        }
+    }
+
+    private void deleteIfExists(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(UPLOAD_URL_PREFIX)) {
+            return;
+        }
+
+        String fileName = imageUrl.substring(UPLOAD_URL_PREFIX.length());
+        if (fileName.isBlank()) {
+            return;
+        }
+
+        Path targetPath = uploadPath.resolve(fileName).normalize();
+        if (!targetPath.startsWith(uploadPath)) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(targetPath);
+        } catch (IOException e) {
+            throw new ServiceException("500-1", "이미지 삭제 중 오류가 발생했습니다.");
         }
     }
 }

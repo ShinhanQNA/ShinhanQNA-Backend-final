@@ -91,6 +91,15 @@ class PostIntegrationTest {
     }
 
     @Test
+    void 게시글_작성_요청은_인증_토큰이_없으면_401() throws Exception {
+        MockMultipartHttpServletRequestBuilder requestBuilder = multipart("/api/v1/posts")
+                .file(createPostPart("FREE", "무토큰 작성", "인증 필요"));
+
+        mockMvc.perform(requestBuilder)
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void 비작성자_삭제_요청은_403() throws Exception {
         String writerToken = registerAndLogin("postuser2@univ.ac.kr", "20251002", "postnick2");
         String otherToken = registerAndLogin("postuser3@univ.ac.kr", "20251003", "postnick3");

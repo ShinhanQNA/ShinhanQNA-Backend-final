@@ -1,6 +1,5 @@
 package back.sw.domain.post.controller;
 
-import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.post.dto.request.PostCreateRequest;
 import back.sw.domain.post.dto.request.PostUpdateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
@@ -8,19 +7,20 @@ import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.service.PostService;
+import back.sw.global.security.AuthenticatedMember;
 import back.sw.global.response.RsData;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -38,15 +38,14 @@ import java.util.List;
 )
 public class PostController {
     private final PostService postService;
-    private final AuthService authService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RsData<PostCreateResponse>> create(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @Valid @RequestPart("post") PostCreateRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         PostCreateResponse data = postService.create(memberId, request, images);
 
         return ResponseEntity.status(201)
@@ -73,11 +72,11 @@ public class PostController {
 
     @PatchMapping("/{postId}")
     public RsData<Void> update(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId,
             @Valid @RequestBody PostUpdateRequest request
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         postService.update(memberId, postId, request);
 
         return new RsData<>("200-1", "게시글이 수정되었습니다.", null);
@@ -85,10 +84,10 @@ public class PostController {
 
     @DeleteMapping("/{postId}")
     public RsData<Void> delete(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         postService.delete(memberId, postId);
 
         return new RsData<>("200-1", "게시글이 삭제되었습니다.", null);

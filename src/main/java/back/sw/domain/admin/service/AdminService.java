@@ -9,6 +9,7 @@ import back.sw.domain.comment.repository.CommentRepository;
 import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.entity.MemberRole;
 import back.sw.domain.member.repository.MemberRepository;
+import back.sw.domain.post.event.PostDeletedEvent;
 import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.repository.PostRepository;
 import back.sw.domain.report.repository.CommentReportRepository;
@@ -16,6 +17,7 @@ import back.sw.domain.report.repository.PostReportRepository;
 import back.sw.global.exception.ServiceException;
 import back.sw.global.util.PageUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -36,6 +38,7 @@ public class AdminService {
     private final CommentRepository commentRepository;
     private final PostReportRepository postReportRepository;
     private final CommentReportRepository commentReportRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public AdminPostReportListResponse getPostReports(int memberId, int page, int size) {
         assertAdmin(memberId);
@@ -97,6 +100,7 @@ public class AdminService {
                 .orElseThrow(() -> new ServiceException("404-1", "게시글을 찾을 수 없습니다."));
 
         post.softDelete();
+        applicationEventPublisher.publishEvent(new PostDeletedEvent(postId));
     }
 
     @Transactional

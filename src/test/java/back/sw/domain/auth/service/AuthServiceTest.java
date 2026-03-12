@@ -8,7 +8,6 @@ import back.sw.domain.auth.dto.response.TokenResponse;
 import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.repository.MemberRepository;
 import back.sw.global.exception.ServiceException;
-import back.sw.global.security.BearerTokenResolver;
 import back.sw.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +21,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,9 +33,6 @@ class AuthServiceTest {
 
     @Mock
     private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
-    private BearerTokenResolver bearerTokenResolver;
 
     @InjectMocks
     private AuthService authService;
@@ -78,7 +73,7 @@ class AuthServiceTest {
         Member member = Member.join("user3@univ.ac.kr", "20250003", "encoded-password", "nick3");
         member.updateRefreshToken("refresh-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
         when(jwtTokenProvider.generateAccessToken(member)).thenReturn("new-access-token");
 
@@ -92,7 +87,7 @@ class AuthServiceTest {
         Member member = Member.join("user4@univ.ac.kr", "20250004", "encoded-password", "nick4");
         member.updateRefreshToken("another-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
 
         ServiceException exception = assertThrows(
@@ -108,35 +103,11 @@ class AuthServiceTest {
         Member member = Member.join("user5@univ.ac.kr", "20250005", "encoded-password", "nick5");
         member.updateRefreshToken("refresh-token");
 
-        when(jwtTokenProvider.getMemberId("refresh-token")).thenReturn(1);
+        when(jwtTokenProvider.getMemberIdFromRefreshToken("refresh-token")).thenReturn(1);
         when(memberRepository.findById(1)).thenReturn(Optional.of(member));
 
         authService.logout(new LogoutRequest("refresh-token"));
 
         assertNull(member.getRefreshToken());
-    }
-
-    @Test
-    void getMemberIdFromAuthorizationHeaderFailsWhenInvalidFormat() {
-        when(bearerTokenResolver.resolve("Token abc"))
-                .thenThrow(new ServiceException("400-1", "Authorization 헤더 형식이 올바르지 않습니다."));
-
-        ServiceException exception = assertThrows(
-                ServiceException.class,
-                () -> authService.getMemberIdFromAuthorizationHeader("Token abc")
-        );
-
-        assertEquals("400-1", exception.getRsData().resultCode());
-        verifyNoInteractions(jwtTokenProvider);
-    }
-
-    @Test
-    void getMemberIdFromAuthorizationHeaderSuccess() {
-        when(bearerTokenResolver.resolve("Bearer access-token")).thenReturn("access-token");
-        when(jwtTokenProvider.getMemberId("access-token")).thenReturn(10);
-
-        int memberId = authService.getMemberIdFromAuthorizationHeader("Bearer access-token");
-
-        assertEquals(10, memberId);
     }
 }

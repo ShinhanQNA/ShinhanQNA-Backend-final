@@ -152,6 +152,20 @@ class AuthMemberIntegrationTest {
                 ).andExpect(status().isBadRequest());
     }
 
+    @Test
+    void 닉네임_수정은_잘못된_토큰_형식이면_401() throws Exception {
+        register("user7@univ.ac.kr", "20250007", "password1234", "originNick7");
+
+        mockMvc.perform(
+                        patch("/api/v1/members/me/nickname")
+                                .header("Authorization", "Token invalid")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(Map.of(
+                                        "nickname", "changedNick7"
+                                )))
+                ).andExpect(status().isUnauthorized());
+    }
+
     private void register(String email, String studentNumber, String password, String nickname) throws Exception {
         mockMvc.perform(
                 post("/api/v1/members")

@@ -8,7 +8,6 @@ import back.sw.domain.auth.dto.response.TokenResponse;
 import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.repository.MemberRepository;
 import back.sw.global.exception.ServiceException;
-import back.sw.global.security.BearerTokenResolver;
 import back.sw.global.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +24,6 @@ public class AuthService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final BearerTokenResolver bearerTokenResolver;
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
@@ -60,14 +58,8 @@ public class AuthService {
         member.clearRefreshToken();
     }
 
-    public int getMemberIdFromAuthorizationHeader(String authorizationHeader) {
-        String accessToken = bearerTokenResolver.resolve(authorizationHeader);
-
-        return jwtTokenProvider.getMemberId(accessToken);
-    }
-
     private Member getMemberByRefreshToken(String refreshToken) {
-        int memberId = jwtTokenProvider.getMemberId(refreshToken);
+        int memberId = jwtTokenProvider.getMemberIdFromRefreshToken(refreshToken);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException("401-1", INVALID_TOKEN_MESSAGE));

@@ -3,14 +3,14 @@ package back.sw.domain.admin.controller;
 import back.sw.domain.admin.dto.response.AdminCommentReportListResponse;
 import back.sw.domain.admin.dto.response.AdminPostReportListResponse;
 import back.sw.domain.admin.service.AdminService;
-import back.sw.domain.auth.service.AuthService;
 import back.sw.global.response.RsData;
+import back.sw.global.security.AuthenticatedMember;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,15 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class AdminController {
     private final AdminService adminService;
-    private final AuthService authService;
 
     @GetMapping("/reports/posts")
     public RsData<AdminPostReportListResponse> getPostReports(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         AdminPostReportListResponse data = adminService.getPostReports(memberId, page, size);
 
         return new RsData<>("200-1", "게시글 신고 목록을 조회했습니다.", data);
@@ -40,11 +39,11 @@ public class AdminController {
 
     @GetMapping("/reports/comments")
     public RsData<AdminCommentReportListResponse> getCommentReports(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         AdminCommentReportListResponse data = adminService.getCommentReports(memberId, page, size);
 
         return new RsData<>("200-1", "댓글 신고 목록을 조회했습니다.", data);
@@ -52,10 +51,10 @@ public class AdminController {
 
     @DeleteMapping("/posts/{postId}")
     public RsData<Void> deletePost(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         adminService.deletePost(memberId, postId);
 
         return new RsData<>("200-1", "게시글을 삭제했습니다.", null);
@@ -63,10 +62,10 @@ public class AdminController {
 
     @DeleteMapping("/comments/{commentId}")
     public RsData<Void> deleteComment(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int commentId
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         adminService.deleteComment(memberId, commentId);
 
         return new RsData<>("200-1", "댓글을 삭제했습니다.", null);

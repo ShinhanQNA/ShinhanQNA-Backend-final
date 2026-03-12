@@ -1,23 +1,23 @@
 package back.sw.domain.comment.controller;
 
-import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.comment.dto.request.CommentCreateRequest;
 import back.sw.domain.comment.dto.request.CommentUpdateRequest;
 import back.sw.domain.comment.dto.response.CommentCreateResponse;
 import back.sw.domain.comment.dto.response.CommentListResponse;
 import back.sw.domain.comment.service.CommentService;
 import back.sw.global.response.RsData;
+import back.sw.global.security.AuthenticatedMember;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,15 +30,14 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class CommentController {
     private final CommentService commentService;
-    private final AuthService authService;
 
     @PostMapping
     public ResponseEntity<RsData<CommentCreateResponse>> create(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId,
             @Valid @RequestBody CommentCreateRequest request
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         CommentCreateResponse data = commentService.create(memberId, postId, request);
 
         return ResponseEntity.status(201)
@@ -54,12 +53,12 @@ public class CommentController {
 
     @PatchMapping("/{commentId}")
     public RsData<Void> update(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId,
             @PathVariable int commentId,
             @Valid @RequestBody CommentUpdateRequest request
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         commentService.update(memberId, postId, commentId, request);
 
         return new RsData<>("200-1", "댓글이 수정되었습니다.", null);
@@ -67,11 +66,11 @@ public class CommentController {
 
     @DeleteMapping("/{commentId}")
     public RsData<Void> delete(
-            @RequestHeader("Authorization") String authorization,
+            @AuthenticationPrincipal AuthenticatedMember authenticatedMember,
             @PathVariable int postId,
             @PathVariable int commentId
     ) {
-        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        int memberId = authenticatedMember.memberId();
         commentService.delete(memberId, postId, commentId);
 
         return new RsData<>("200-1", "댓글이 삭제되었습니다.", null);

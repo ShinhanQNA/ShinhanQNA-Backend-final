@@ -15,6 +15,16 @@ spring:
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:false}
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+custom:
+  swagger:
+    enabled: true
+
 logging:
   level:
     root: INFO

@@ -2,6 +2,7 @@ package back.sw.domain.comment.controller;
 
 import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.comment.dto.request.CommentCreateRequest;
+import back.sw.domain.comment.dto.request.CommentUpdateRequest;
 import back.sw.domain.comment.dto.response.CommentCreateResponse;
 import back.sw.domain.comment.dto.response.CommentListResponse;
 import back.sw.domain.comment.service.CommentService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,6 +50,19 @@ public class CommentController {
         CommentListResponse data = commentService.getList(postId);
 
         return new RsData<>("200-1", "댓글 목록을 조회했습니다.", data);
+    }
+
+    @PatchMapping("/{commentId}")
+    public RsData<Void> update(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable int postId,
+            @PathVariable int commentId,
+            @Valid @RequestBody CommentUpdateRequest request
+    ) {
+        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        commentService.update(memberId, postId, commentId, request);
+
+        return new RsData<>("200-1", "댓글이 수정되었습니다.", null);
     }
 
     @DeleteMapping("/{commentId}")

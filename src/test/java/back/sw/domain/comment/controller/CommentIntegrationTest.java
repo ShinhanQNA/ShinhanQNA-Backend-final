@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -107,6 +108,45 @@ class CommentIntegrationTest {
         mockMvc.perform(
                 delete("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
                         .header("Authorization", "Bearer " + otherToken)
+        ).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 댓글_수정_성공() throws Exception {
+        String writerToken = registerAndLogin("commentwriter4@univ.ac.kr", "20251017", "writer4");
+        int postId = createPost(writerToken, "FREE", "댓글 수정 테스트", "본문", List.of());
+        int commentId = createComment(postId, writerToken, "수정 전 댓글");
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("content", "수정 후 댓글")))
+        ).andExpect(status().isOk());
+
+        MvcResult listResult = mockMvc.perform(
+                        get("/api/v1/posts/{postId}/comments", postId)
+                ).andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode items = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .get("data")
+                .get("items");
+        assertEquals("수정 후 댓글", items.get(0).get("content").asText());
+    }
+
+    @Test
+    void 비작성자_댓글_수정_요청은_403() throws Exception {
+        String writerToken = registerAndLogin("commentwriter5@univ.ac.kr", "20251018", "writer5");
+        String otherToken = registerAndLogin("commentuser5@univ.ac.kr", "20251019", "user5");
+        int postId = createPost(writerToken, "FREE", "댓글 수정 권한", "본문", List.of());
+        int commentId = createComment(postId, writerToken, "작성자 댓글");
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + otherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("content", "변경 시도")))
         ).andExpect(status().isForbidden());
     }
 

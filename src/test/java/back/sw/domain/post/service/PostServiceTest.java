@@ -3,6 +3,7 @@ package back.sw.domain.post.service;
 import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.repository.MemberRepository;
 import back.sw.domain.post.dto.request.PostCreateRequest;
+import back.sw.domain.post.dto.request.PostUpdateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
@@ -275,6 +276,40 @@ class PostServiceTest {
         assertEquals("403-1", exception.getRsData().resultCode());
         assertFalse(post.isDeleted());
         verify(recruitmentService, never()).createForPost(any(Post.class), any(RecruitmentCreateRequest.class));
+    }
+
+    @Test
+    void updateFailsWhenNotAuthor() {
+        Member writer = Member.join("user10@univ.ac.kr", "20250010", "encoded", "nick10");
+        ReflectionTestUtils.setField(writer, "id", 10);
+        Post post = Post.create(writer, BoardType.FREE, "수정 전", "내용 전");
+        ReflectionTestUtils.setField(post, "id", 40);
+
+        when(postRepository.findByIdAndDeletedFalse(40)).thenReturn(Optional.of(post));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> postService.update(999, 40, new PostUpdateRequest("수정 후", "내용 후"))
+        );
+
+        assertEquals("403-1", exception.getRsData().resultCode());
+        assertEquals("수정 전", post.getTitle());
+        assertEquals("내용 전", post.getContent());
+    }
+
+    @Test
+    void updateSuccess() {
+        Member writer = Member.join("user11@univ.ac.kr", "20250011", "encoded", "nick11");
+        ReflectionTestUtils.setField(writer, "id", 11);
+        Post post = Post.create(writer, BoardType.FREE, "수정 전", "내용 전");
+        ReflectionTestUtils.setField(post, "id", 41);
+
+        when(postRepository.findByIdAndDeletedFalse(41)).thenReturn(Optional.of(post));
+
+        postService.update(11, 41, new PostUpdateRequest("수정 후", "내용 후"));
+
+        assertEquals("수정 후", post.getTitle());
+        assertEquals("내용 후", post.getContent());
     }
 
     @Test

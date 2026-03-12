@@ -1,5 +1,6 @@
 package back.sw.domain.auth.controller;
 
+import back.sw.domain.auth.controller.docs.AuthApiDocs;
 import back.sw.domain.auth.dto.request.LoginRequest;
 import back.sw.domain.auth.dto.request.LogoutRequest;
 import back.sw.domain.auth.dto.request.RefreshTokenRequest;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController implements AuthApiDocs {
     private final AuthService authService;
 
     @PostMapping("/login")

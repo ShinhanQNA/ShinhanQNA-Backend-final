@@ -69,6 +69,10 @@ public class Comment extends BaseEntity {
         this.deleted = true;
     }
 
+    public void update(String content) {
+        this.content = content;
+    }
+
     public boolean isWrittenBy(int memberId) {
         return member.getId() == memberId;
     }

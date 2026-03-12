@@ -1,6 +1,7 @@
 package back.sw.domain.comment.service;
 
 import back.sw.domain.comment.dto.request.CommentCreateRequest;
+import back.sw.domain.comment.dto.request.CommentUpdateRequest;
 import back.sw.domain.comment.dto.response.CommentCreateResponse;
 import back.sw.domain.comment.dto.response.CommentListResponse;
 import back.sw.domain.comment.entity.Comment;
@@ -164,6 +165,68 @@ class CommentServiceTest {
 
         assertTrue(comment.isDeleted());
         assertEquals(0, post.getCommentCount());
+    }
+
+    @Test
+    void updateFailsWhenNotAuthor() {
+        Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
+        Member commentWriter = createMember(2, "user@univ.ac.kr", "20250002", "user");
+        Post post = createPost(10, postWriter, "제목", "내용");
+
+        CommentAnonymousProfile profile = CommentAnonymousProfile.create(post, commentWriter, 1);
+        Comment comment = Comment.create(post, commentWriter, profile, "수정 전");
+        ReflectionTestUtils.setField(comment, "id", 30);
+
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(commentRepository.findByIdAndPostId(30, 10)).thenReturn(Optional.of(comment));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> commentService.update(999, 10, 30, new CommentUpdateRequest("수정 후"))
+        );
+
+        assertEquals("403-1", exception.getRsData().resultCode());
+        assertEquals("수정 전", comment.getContent());
+    }
+
+    @Test
+    void updateFailsWhenCommentAlreadyDeleted() {
+        Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
+        Member commentWriter = createMember(2, "user@univ.ac.kr", "20250002", "user");
+        Post post = createPost(10, postWriter, "제목", "내용");
+
+        CommentAnonymousProfile profile = CommentAnonymousProfile.create(post, commentWriter, 1);
+        Comment comment = Comment.create(post, commentWriter, profile, "삭제된 댓글");
+        comment.softDelete();
+        ReflectionTestUtils.setField(comment, "id", 31);
+
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(commentRepository.findByIdAndPostId(31, 10)).thenReturn(Optional.of(comment));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> commentService.update(2, 10, 31, new CommentUpdateRequest("수정 시도"))
+        );
+
+        assertEquals("400-1", exception.getRsData().resultCode());
+    }
+
+    @Test
+    void updateSuccess() {
+        Member postWriter = createMember(1, "writer@univ.ac.kr", "20250001", "writer");
+        Member commentWriter = createMember(2, "user@univ.ac.kr", "20250002", "user");
+        Post post = createPost(10, postWriter, "제목", "내용");
+
+        CommentAnonymousProfile profile = CommentAnonymousProfile.create(post, commentWriter, 1);
+        Comment comment = Comment.create(post, commentWriter, profile, "수정 전");
+        ReflectionTestUtils.setField(comment, "id", 32);
+
+        when(postRepository.findByIdAndDeletedFalse(10)).thenReturn(Optional.of(post));
+        when(commentRepository.findByIdAndPostId(32, 10)).thenReturn(Optional.of(comment));
+
+        commentService.update(2, 10, 32, new CommentUpdateRequest("수정 후"));
+
+        assertEquals("수정 후", comment.getContent());
     }
 
     private Member createMember(int id, String email, String studentNumber, String nickname) {

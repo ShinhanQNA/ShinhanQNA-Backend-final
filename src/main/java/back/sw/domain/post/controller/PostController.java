@@ -2,6 +2,7 @@ package back.sw.domain.post.controller;
 
 import back.sw.domain.auth.service.AuthService;
 import back.sw.domain.post.dto.request.PostCreateRequest;
+import back.sw.domain.post.dto.request.PostUpdateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
@@ -15,8 +16,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -66,6 +69,18 @@ public class PostController {
         PostDetailResponse data = postService.getDetail(postId);
 
         return new RsData<>("200-1", "게시글을 조회했습니다.", data);
+    }
+
+    @PatchMapping("/{postId}")
+    public RsData<Void> update(
+            @RequestHeader("Authorization") String authorization,
+            @PathVariable int postId,
+            @Valid @RequestBody PostUpdateRequest request
+    ) {
+        int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
+        postService.update(memberId, postId, request);
+
+        return new RsData<>("200-1", "게시글이 수정되었습니다.", null);
     }
 
     @DeleteMapping("/{postId}")

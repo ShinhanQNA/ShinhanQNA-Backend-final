@@ -1,6 +1,7 @@
 package back.sw.domain.comment.service;
 
 import back.sw.domain.comment.dto.request.CommentCreateRequest;
+import back.sw.domain.comment.dto.request.CommentUpdateRequest;
 import back.sw.domain.comment.dto.response.CommentCreateResponse;
 import back.sw.domain.comment.dto.response.CommentItemResponse;
 import back.sw.domain.comment.dto.response.CommentListResponse;
@@ -54,6 +55,23 @@ public class CommentService {
                 .toList();
 
         return new CommentListResponse(items);
+    }
+
+    @Transactional
+    public void update(int memberId, int postId, int commentId, CommentUpdateRequest request) {
+        getPost(postId);
+        Comment comment = commentRepository.findByIdAndPostId(commentId, postId)
+                .orElseThrow(() -> new ServiceException("404-1", "댓글을 찾을 수 없습니다."));
+
+        if (!comment.isWrittenBy(memberId)) {
+            throw new ServiceException("403-1", "수정 권한이 없습니다.");
+        }
+
+        if (comment.isDeleted()) {
+            throw new ServiceException("400-1", "이미 삭제된 댓글입니다.");
+        }
+
+        comment.update(request.content());
     }
 
     @Transactional

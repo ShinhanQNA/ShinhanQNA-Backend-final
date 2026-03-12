@@ -3,6 +3,7 @@ package back.sw.domain.post.service;
 import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.repository.MemberRepository;
 import back.sw.domain.post.dto.request.PostCreateRequest;
+import back.sw.domain.post.dto.request.PostUpdateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
@@ -89,6 +90,18 @@ public class PostService {
                 .orElseThrow(() -> new ServiceException("404-1", "게시글을 찾을 수 없습니다."));
 
         return toDetailResponse(post);
+    }
+
+    @Transactional
+    public void update(int memberId, int postId, PostUpdateRequest request) {
+        Post post = postRepository.findByIdAndDeletedFalse(postId)
+                .orElseThrow(() -> new ServiceException("404-1", "게시글을 찾을 수 없습니다."));
+
+        if (!post.isWrittenBy(memberId)) {
+            throw new ServiceException("403-1", "수정 권한이 없습니다.");
+        }
+
+        post.update(request.title(), request.content());
     }
 
     @Transactional

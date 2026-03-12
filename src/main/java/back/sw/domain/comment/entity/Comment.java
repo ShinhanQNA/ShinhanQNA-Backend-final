@@ -84,4 +84,12 @@ public class Comment extends BaseEntity {
     public String displayContent() {
         return deleted ? DELETED_CONTENT : content;
     }
+
+    public int postId() {
+        return post.getId();
+    }
+
+    public void decreasePostCommentCount() {
+        post.decreaseCommentCount();
+    }
 }

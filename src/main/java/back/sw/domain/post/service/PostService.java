@@ -12,6 +12,9 @@ import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.entity.PostImage;
 import back.sw.domain.post.repository.PostImageRepository;
 import back.sw.domain.post.repository.PostRepository;
+import back.sw.domain.recruitment.dto.request.RecruitmentCreateRequest;
+import back.sw.domain.recruitment.dto.response.RecruitmentDetailResponse;
+import back.sw.domain.recruitment.service.RecruitmentService;
 import back.sw.global.exception.ServiceException;
 import back.sw.global.util.PageUtils;
 import lombok.RequiredArgsConstructor;
@@ -35,11 +38,13 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final PostImageRepository postImageRepository;
     private final PostImageStorageService postImageStorageService;
+    private final RecruitmentService recruitmentService;
 
     @Transactional
     public PostCreateResponse create(int memberId, PostCreateRequest request, List<? extends MultipartFile> images) {
         List<? extends MultipartFile> safeImages = normalizeImages(images);
         validateImageCount(safeImages);
+        validateRecruitmentPolicy(request);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException("404-1", "회원을 찾을 수 없습니다."));
@@ -47,6 +52,7 @@ public class PostService {
         Post post = Post.create(member, request.boardType(), request.title(), request.content());
         postRepository.save(post);
         savePostImages(post, safeImages);
+        saveRecruitmentDetail(post, request.recruitment());
 
         return new PostCreateResponse(post.getId());
     }
@@ -114,6 +120,10 @@ public class PostService {
                 .stream()
                 .map(PostImage::getImageUrl)
                 .toList();
+        boolean isRecruitBoard = post.getBoardType().isRecruitBoard();
+        RecruitmentDetailResponse recruitment = isRecruitBoard
+                ? recruitmentService.getDetailResponseByPostId(post.getId()).orElse(null)
+                : null;
 
         return new PostDetailResponse(
                 post.getId(),
@@ -123,6 +133,7 @@ public class PostService {
                 post.getLikeCount(),
                 post.getCommentCount(),
                 imageUrls,
+                recruitment,
                 "익명",
                 post.getCreateDate(),
                 post.getModifyDate()
@@ -150,5 +161,26 @@ public class PostService {
                 .toList();
 
         postImageRepository.saveAll(postImages);
+    }
+
+    private void validateRecruitmentPolicy(PostCreateRequest request) {
+        boolean isRecruitBoard = request.boardType().isRecruitBoard();
+        boolean hasRecruitment = request.recruitment() != null;
+
+        if (isRecruitBoard && !hasRecruitment) {
+            throw new ServiceException("400-1", "모집 게시판 글에는 모집 정보가 필요합니다.");
+        }
+
+        if (!isRecruitBoard && hasRecruitment) {
+            throw new ServiceException("400-1", "모집 정보는 모집 게시판에서만 입력할 수 있습니다.");
+        }
+    }
+
+    private void saveRecruitmentDetail(Post post, RecruitmentCreateRequest recruitment) {
+        if (recruitment == null) {
+            return;
+        }
+
+        recruitmentService.createForPost(post, recruitment);
     }
 }

@@ -45,8 +45,9 @@ class AdminIntegrationTest {
     @Test
     void 관리자만_신고목록을_조회할_수_있다() throws Exception {
         String adminEmail = "admin-list@univ.ac.kr";
-        String adminToken = registerAndLogin(adminEmail, "20256001", "adminlist");
+        register(adminEmail, "20256001", "adminlist");
         promoteToAdmin(adminEmail);
+        String adminToken = login(adminEmail);
         String writerToken = registerAndLogin("writer-list@univ.ac.kr", "20256002", "writerlist");
         String reporterToken = registerAndLogin("reporter-list@univ.ac.kr", "20256003", "reporterlist");
 
@@ -90,8 +91,9 @@ class AdminIntegrationTest {
     @Test
     void 관리자는_게시글을_강제삭제할_수_있다() throws Exception {
         String adminEmail = "admin-post@univ.ac.kr";
-        String adminToken = registerAndLogin(adminEmail, "20256004", "adminpost");
+        register(adminEmail, "20256004", "adminpost");
         promoteToAdmin(adminEmail);
+        String adminToken = login(adminEmail);
         String writerToken = registerAndLogin("writer-post@univ.ac.kr", "20256005", "writerpost");
 
         int postId = createPost(writerToken, "QNA", "삭제 대상", "내용", List.of());
@@ -113,8 +115,9 @@ class AdminIntegrationTest {
     @Test
     void 관리자는_댓글을_강제삭제하고_집계를_맞춘다() throws Exception {
         String adminEmail = "admin-comment@univ.ac.kr";
-        String adminToken = registerAndLogin(adminEmail, "20256006", "admincomment");
+        register(adminEmail, "20256006", "admincomment");
         promoteToAdmin(adminEmail);
+        String adminToken = login(adminEmail);
         String writerToken = registerAndLogin("writer-comment@univ.ac.kr", "20256007", "writercomment");
         String commenterToken = registerAndLogin("commenter-comment@univ.ac.kr", "20256008", "commentercomment");
 
@@ -152,6 +155,11 @@ class AdminIntegrationTest {
     }
 
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {
+        register(email, studentNumber, nickname);
+        return login(email);
+    }
+
+    private void register(String email, String studentNumber, String nickname) throws Exception {
         mockMvc.perform(
                 post("/api/v1/members")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -162,7 +170,9 @@ class AdminIntegrationTest {
                                 "nickname", nickname
                         )))
         ).andExpect(status().isCreated());
+    }
 
+    private String login(String email) throws Exception {
         MvcResult loginResult = mockMvc.perform(
                         post("/api/v1/auth/login")
                                 .contentType(MediaType.APPLICATION_JSON)

@@ -150,6 +150,63 @@ class CommentIntegrationTest {
         ).andExpect(status().isForbidden());
     }
 
+    @Test
+    void 삭제된_댓글_수정_요청은_400이고_내용은_유지된다() throws Exception {
+        String writerToken = registerAndLogin("commentwriter6@univ.ac.kr", "20251020", "writer6");
+        int postId = createPost(writerToken, "FREE", "삭제된 댓글 수정", "본문", List.of());
+        int commentId = createComment(postId, writerToken, "삭제될 댓글");
+
+        mockMvc.perform(
+                delete("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + writerToken)
+        ).andExpect(status().isOk());
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("content", "수정 시도")))
+        ).andExpect(status().isBadRequest());
+
+        MvcResult listResult = mockMvc.perform(get("/api/v1/posts/{postId}/comments", postId))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode firstComment = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .get("data")
+                .get("items")
+                .get(0);
+        assertEquals("삭제된 댓글입니다.", firstComment.get("content").asText());
+        assertEquals(true, firstComment.get("deleted").asBoolean());
+    }
+
+    @Test
+    void 댓글_수정_요청시_빈_내용은_400() throws Exception {
+        String writerToken = registerAndLogin("commentwriter7@univ.ac.kr", "20251025", "writer7");
+        int postId = createPost(writerToken, "FREE", "댓글 빈값 검증", "본문", List.of());
+        int commentId = createComment(postId, writerToken, "원본 댓글");
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("content", " ")))
+        ).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 댓글_수정_요청시_내용_누락은_400() throws Exception {
+        String writerToken = registerAndLogin("commentwriter8@univ.ac.kr", "20251026", "writer8");
+        int postId = createPost(writerToken, "FREE", "댓글 누락 검증", "본문", List.of());
+        int commentId = createComment(postId, writerToken, "원본 댓글");
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of()))
+        ).andExpect(status().isBadRequest());
+    }
+
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {
         mockMvc.perform(
                 post("/api/v1/members")

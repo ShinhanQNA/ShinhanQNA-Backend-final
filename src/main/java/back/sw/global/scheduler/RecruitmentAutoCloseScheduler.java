@@ -21,7 +21,7 @@ public class RecruitmentAutoCloseScheduler {
     private final RecruitmentService recruitmentService;
     private final Clock clock;
 
-    @Scheduled(cron = "${custom.recruitment.auto-close-cron:0 * * * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "${custom.recruitment.auto-close-cron:0 0 0 * * *}", zone = "Asia/Seoul")
     public void closeExpiredRecruitments() {
         LocalDate todaySeoul = ZonedDateTime.now(clock)
                 .withZoneSameInstant(ASIA_SEOUL)

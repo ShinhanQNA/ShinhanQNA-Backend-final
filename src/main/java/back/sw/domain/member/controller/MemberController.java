@@ -1,5 +1,6 @@
 package back.sw.domain.member.controller;
 
+import back.sw.domain.member.controller.docs.MemberApiDocs;
 import back.sw.domain.member.dto.request.MemberJoinRequest;
 import back.sw.domain.member.dto.request.NicknameUpdateRequest;
 import back.sw.domain.member.dto.response.MemberJoinResponse;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
-public class MemberController {
+public class MemberController implements MemberApiDocs {
     private final MemberService memberService;
 
     @PostMapping

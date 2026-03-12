@@ -1,5 +1,6 @@
 package back.sw.global.security;
 
+import back.sw.domain.member.entity.MemberRole;
 import back.sw.global.exception.ServiceException;
 import back.sw.global.security.TokenAuthenticationException.TokenErrorType;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +59,8 @@ class JwtAuthenticationFilterTest {
         MockFilterChain filterChain = new MockFilterChain();
 
         when(bearerTokenResolver.resolve("Bearer access-token")).thenReturn("access-token");
-        when(jwtTokenProvider.getMemberIdFromAccessToken("access-token")).thenReturn(7);
+        when(jwtTokenProvider.getAccessTokenPayload("access-token"))
+                .thenReturn(new JwtTokenProvider.AccessTokenPayload(7, MemberRole.ADMIN));
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
@@ -66,6 +68,12 @@ class JwtAuthenticationFilterTest {
         assertNotNull(authentication);
         assertTrue(authentication.getPrincipal() instanceof AuthenticatedMember);
         assertEquals(7, ((AuthenticatedMember) authentication.getPrincipal()).memberId());
+        assertEquals(MemberRole.ADMIN, ((AuthenticatedMember) authentication.getPrincipal()).role());
+        assertTrue(
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()))
+        );
     }
 
     @Test
@@ -106,7 +114,7 @@ class JwtAuthenticationFilterTest {
         MockFilterChain filterChain = new MockFilterChain();
 
         when(bearerTokenResolver.resolve("Bearer expired-access-token")).thenReturn("expired-access-token");
-        when(jwtTokenProvider.getMemberIdFromAccessToken("expired-access-token"))
+        when(jwtTokenProvider.getAccessTokenPayload("expired-access-token"))
                 .thenThrow(new TokenAuthenticationException(TokenErrorType.EXPIRED, "만료된 토큰입니다."));
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain);

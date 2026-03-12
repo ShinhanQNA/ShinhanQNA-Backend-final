@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -41,11 +42,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String accessToken = bearerTokenResolver.resolve(authorizationHeader);
-            int memberId = jwtTokenProvider.getMemberIdFromAccessToken(accessToken);
+            JwtTokenProvider.AccessTokenPayload payload = jwtTokenProvider.getAccessTokenPayload(accessToken);
 
-            AuthenticatedMember authenticatedMember = new AuthenticatedMember(memberId);
+            AuthenticatedMember authenticatedMember = new AuthenticatedMember(payload.memberId(), payload.role());
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(authenticatedMember, null, List.of());
+                    new UsernamePasswordAuthenticationToken(
+                            authenticatedMember,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + payload.role().name()))
+                    );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);

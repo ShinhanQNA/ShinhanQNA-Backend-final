@@ -50,22 +50,36 @@ class AdminIntegrationTest {
         String writerToken = registerAndLogin("writer-list@univ.ac.kr", "20256002", "writerlist");
         String reporterToken = registerAndLogin("reporter-list@univ.ac.kr", "20256003", "reporterlist");
 
-        int postId = createPost(writerToken, "FREE", "신고 대상", "본문", List.of());
+        int firstPostId = createPost(writerToken, "FREE", "신고 대상1", "본문1", List.of());
         mockMvc.perform(
-                post("/api/v1/posts/{postId}/reports", postId)
+                post("/api/v1/posts/{postId}/reports", firstPostId)
                         .header("Authorization", "Bearer " + reporterToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("reason", "SPAM")))
         ).andExpect(status().isCreated());
 
+        int secondPostId = createPost(writerToken, "FREE", "신고 대상2", "본문2", List.of());
+        mockMvc.perform(
+                post("/api/v1/posts/{postId}/reports", secondPostId)
+                        .header("Authorization", "Bearer " + reporterToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("reason", "ABUSE")))
+        ).andExpect(status().isCreated());
+
         MvcResult listResult = mockMvc.perform(
                         get("/api/v1/admin/reports/posts")
+                                .param("page", "0")
+                                .param("size", "1")
                                 .header("Authorization", "Bearer " + adminToken)
                 ).andExpect(status().isOk())
                 .andReturn();
 
         JsonNode body = objectMapper.readTree(listResult.getResponse().getContentAsString());
-        assertEquals(postId, body.get("data").get("items").get(0).get("postId").asInt());
+        assertEquals(1, body.get("data").get("items").size());
+        assertEquals(0, body.get("data").get("page").asInt());
+        assertEquals(1, body.get("data").get("size").asInt());
+        assertEquals(2, body.get("data").get("totalElements").asInt());
+        assertEquals(true, body.get("data").get("hasNext").asBoolean());
 
         mockMvc.perform(
                 get("/api/v1/admin/reports/posts")
@@ -81,6 +95,11 @@ class AdminIntegrationTest {
         String writerToken = registerAndLogin("writer-post@univ.ac.kr", "20256005", "writerpost");
 
         int postId = createPost(writerToken, "QNA", "삭제 대상", "내용", List.of());
+
+        mockMvc.perform(
+                delete("/api/v1/admin/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+        ).andExpect(status().isForbidden());
 
         mockMvc.perform(
                 delete("/api/v1/admin/posts/{postId}", postId)
@@ -104,6 +123,11 @@ class AdminIntegrationTest {
 
         mockMvc.perform(
                 delete("/api/v1/admin/comments/{commentId}", commentId)
+                        .header("Authorization", "Bearer " + commenterToken)
+        ).andExpect(status().isForbidden());
+
+        mockMvc.perform(
+                delete("/api/v1/admin/comments/{commentId}", commentId)
                         .header("Authorization", "Bearer " + adminToken)
         ).andExpect(status().isOk());
 
@@ -124,6 +148,7 @@ class AdminIntegrationTest {
     private void promoteToAdmin(String email) {
         Member member = memberRepository.findByEmail(email).orElseThrow();
         ReflectionTestUtils.setField(member, "role", MemberRole.ADMIN);
+        memberRepository.flush();
     }
 
     private String registerAndLogin(String email, String studentNumber, String nickname) throws Exception {

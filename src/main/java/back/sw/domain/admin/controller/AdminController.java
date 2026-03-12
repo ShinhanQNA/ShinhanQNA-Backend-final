@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,20 +28,24 @@ public class AdminController {
 
     @GetMapping("/reports/posts")
     public RsData<AdminPostReportListResponse> getPostReports(
-            @RequestHeader("Authorization") String authorization
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
-        AdminPostReportListResponse data = new AdminPostReportListResponse(adminService.getPostReports(memberId));
+        AdminPostReportListResponse data = adminService.getPostReports(memberId, page, size);
 
         return new RsData<>("200-1", "게시글 신고 목록을 조회했습니다.", data);
     }
 
     @GetMapping("/reports/comments")
     public RsData<AdminCommentReportListResponse> getCommentReports(
-            @RequestHeader("Authorization") String authorization
+            @RequestHeader("Authorization") String authorization,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
         int memberId = authService.getMemberIdFromAuthorizationHeader(authorization);
-        AdminCommentReportListResponse data = new AdminCommentReportListResponse(adminService.getCommentReports(memberId));
+        AdminCommentReportListResponse data = adminService.getCommentReports(memberId, page, size);
 
         return new RsData<>("200-1", "댓글 신고 목록을 조회했습니다.", data);
     }

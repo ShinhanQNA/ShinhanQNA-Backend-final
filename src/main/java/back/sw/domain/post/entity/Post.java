@@ -65,6 +65,11 @@ public class Post extends BaseEntity {
         this.deleted = true;
     }
 
+    public void update(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
+
     public void increaseCommentCount() {
         this.commentCount += 1;
     }

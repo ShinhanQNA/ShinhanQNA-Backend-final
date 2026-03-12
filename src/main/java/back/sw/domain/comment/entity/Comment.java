@@ -65,6 +65,16 @@ public class Comment extends BaseEntity {
         return new Comment(post, member, anonymousProfile, null, content);
     }
 
+    public static Comment createReply(
+            Post post,
+            Member member,
+            CommentAnonymousProfile anonymousProfile,
+            Comment parent,
+            String content
+    ) {
+        return new Comment(post, member, anonymousProfile, parent, content);
+    }
+
     public void softDelete() {
         this.deleted = true;
     }
@@ -91,6 +101,10 @@ public class Comment extends BaseEntity {
 
     public int postId() {
         return post.getId();
+    }
+
+    public Integer parentId() {
+        return parent == null ? null : parent.getId();
     }
 
     public void decreasePostCommentCount() {

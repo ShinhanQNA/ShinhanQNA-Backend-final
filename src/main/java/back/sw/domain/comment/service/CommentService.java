@@ -38,9 +38,12 @@ public class CommentService {
         Post post = getPost(postId);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ServiceException("404-1", "회원을 찾을 수 없습니다."));
+        Comment parent = getParentComment(postId, request.parentId());
 
         CommentAnonymousProfile profile = getOrCreateAnonymousProfile(post, member);
-        Comment comment = Comment.create(post, member, profile, request.content());
+        Comment comment = parent == null
+                ? Comment.create(post, member, profile, request.content())
+                : Comment.createReply(post, member, profile, parent, request.content());
         commentRepository.save(comment);
         post.increaseCommentCount();
 
@@ -95,6 +98,15 @@ public class CommentService {
     private Post getPost(int postId) {
         return postRepository.findByIdAndDeletedFalse(postId)
                 .orElseThrow(() -> new ServiceException("404-1", "게시글을 찾을 수 없습니다."));
+    }
+
+    private Comment getParentComment(int postId, Integer parentId) {
+        if (parentId == null) {
+            return null;
+        }
+
+        return commentRepository.findByIdAndPostId(parentId, postId)
+                .orElseThrow(() -> new ServiceException("404-1", "부모 댓글을 찾을 수 없습니다."));
     }
 
     private CommentAnonymousProfile getOrCreateAnonymousProfile(Post post, Member member) {

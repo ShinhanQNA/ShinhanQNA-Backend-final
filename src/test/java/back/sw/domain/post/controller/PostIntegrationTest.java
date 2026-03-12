@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,6 +111,54 @@ class PostIntegrationTest {
         mockMvc.perform(
                 delete("/api/v1/posts/{postId}", postId)
                         .header("Authorization", "Bearer " + otherToken)
+        ).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void 게시글_수정_성공() throws Exception {
+        String writerToken = registerAndLogin("postuser9@univ.ac.kr", "20251009", "postnick9");
+        int postId = objectMapper.readTree(
+                createPost(writerToken, "FREE", "수정 전 제목", "수정 전 내용", List.of())
+                        .getResponse()
+                        .getContentAsString()
+        ).get("data").get("postId").asInt();
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "수정 후 제목",
+                                "content", "수정 후 내용"
+                        )))
+        ).andExpect(status().isOk());
+
+        MvcResult detailResult = mockMvc.perform(get("/api/v1/posts/{postId}", postId))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode detailBody = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+        assertEquals("수정 후 제목", detailBody.get("data").get("title").asText());
+        assertEquals("수정 후 내용", detailBody.get("data").get("content").asText());
+    }
+
+    @Test
+    void 비작성자_게시글_수정_요청은_403() throws Exception {
+        String writerToken = registerAndLogin("postuser10@univ.ac.kr", "20251010", "postnick10");
+        String otherToken = registerAndLogin("postuser11@univ.ac.kr", "20251021", "postnick11");
+        int postId = objectMapper.readTree(
+                createPost(writerToken, "QNA", "수정 권한", "작성자만 가능", List.of())
+                        .getResponse()
+                        .getContentAsString()
+        ).get("data").get("postId").asInt();
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + otherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "해킹 제목",
+                                "content", "해킹 내용"
+                        )))
         ).andExpect(status().isForbidden());
     }
 

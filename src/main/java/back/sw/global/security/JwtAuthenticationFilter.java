@@ -1,6 +1,7 @@
 package back.sw.global.security;
 
 import back.sw.global.exception.ServiceException;
+import back.sw.global.security.TokenAuthenticationException.TokenErrorType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             String accessToken = bearerTokenResolver.resolve(authorizationHeader);
-            int memberId = jwtTokenProvider.getMemberId(accessToken);
+            int memberId = jwtTokenProvider.getMemberIdFromAccessToken(accessToken);
 
             AuthenticatedMember authenticatedMember = new AuthenticatedMember(memberId);
             UsernamePasswordAuthenticationToken authentication =
@@ -64,13 +65,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String normalizeErrorMessage(ServiceException exception) {
-        String message = exception.getRsData().msg();
-        if (message == null || message.isBlank()) {
-            return INVALID_TOKEN_MESSAGE;
-        }
-
-        if ("만료된 토큰입니다.".equals(message)) {
-            return message;
+        if (exception instanceof TokenAuthenticationException tokenException) {
+            if (tokenException.tokenErrorType() == TokenErrorType.EXPIRED) {
+                return tokenException.getRsData().msg();
+            }
         }
 
         return INVALID_TOKEN_MESSAGE;

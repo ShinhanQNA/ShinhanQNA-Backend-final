@@ -1,12 +1,15 @@
 package back.sw.domain.report.repository;
 
 import back.sw.domain.report.entity.CommentReport;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface CommentReportRepository extends JpaRepository<CommentReport, Integer> {
     boolean existsByCommentIdAndMemberId(int commentId, int memberId);
 
-    List<CommentReport> findAllByOrderByCreateDateDescIdDesc();
+    @Override
+    @EntityGraph(attributePaths = {"comment", "member"})
+    Page<CommentReport> findAll(Pageable pageable);
 }

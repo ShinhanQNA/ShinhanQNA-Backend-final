@@ -1,5 +1,6 @@
 package back.sw.domain.report.controller;
 
+import back.sw.domain.report.controller.docs.ReportApiDocs;
 import back.sw.domain.report.dto.request.ReportCreateRequest;
 import back.sw.domain.report.dto.response.ReportCreateResponse;
 import back.sw.domain.report.service.ReportService;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
         value = "EI_EXPOSE_REP2",
         justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
 )
-public class ReportController {
+public class ReportController implements ReportApiDocs {
     private final ReportService reportService;
 
     @PostMapping("/posts/{postId}/reports")

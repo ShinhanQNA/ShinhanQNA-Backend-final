@@ -1,6 +1,7 @@
 package back.sw.global.security;
 
 import back.sw.domain.member.entity.Member;
+import back.sw.domain.member.entity.MemberRole;
 import back.sw.global.exception.ServiceException;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -20,8 +21,10 @@ class JwtTokenProviderTest {
         String token = jwtTokenProvider.generateAccessToken(member);
 
         int memberId = jwtTokenProvider.getMemberIdFromAccessToken(token);
+        MemberRole role = jwtTokenProvider.getMemberRoleFromAccessToken(token);
 
         assertEquals(7, memberId);
+        assertEquals(MemberRole.STUDENT, role);
     }
 
     @Test

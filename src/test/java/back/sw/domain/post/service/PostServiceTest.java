@@ -219,7 +219,6 @@ class PostServiceTest {
                         PostImage.create(post, "/uploads/1.png", 0),
                         PostImage.create(post, "/uploads/2.png", 1)
                 ));
-        when(recruitmentService.getDetailResponseByPostId(10)).thenReturn(Optional.empty());
 
         PostDetailResponse response = postService.getDetail(10);
 
@@ -229,6 +228,7 @@ class PostServiceTest {
         assertEquals("/uploads/1.png", response.imageUrls().get(0));
         assertEquals("/uploads/2.png", response.imageUrls().get(1));
         assertTrue(response.recruitment() == null);
+        verify(recruitmentService, never()).getDetailResponseByPostId(10);
     }
 
     @Test

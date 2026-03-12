@@ -120,8 +120,10 @@ public class PostService {
                 .stream()
                 .map(PostImage::getImageUrl)
                 .toList();
-        RecruitmentDetailResponse recruitment = recruitmentService.getDetailResponseByPostId(post.getId())
-                .orElse(null);
+        boolean isRecruitBoard = post.getBoardType().isRecruitBoard();
+        RecruitmentDetailResponse recruitment = isRecruitBoard
+                ? recruitmentService.getDetailResponseByPostId(post.getId()).orElse(null)
+                : null;
 
         return new PostDetailResponse(
                 post.getId(),

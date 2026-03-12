@@ -1,7 +1,9 @@
 package back.sw.domain.admin.service;
 
 import back.sw.domain.admin.dto.response.AdminCommentReportItemResponse;
+import back.sw.domain.admin.dto.response.AdminCommentReportListResponse;
 import back.sw.domain.admin.dto.response.AdminPostReportItemResponse;
+import back.sw.domain.admin.dto.response.AdminPostReportListResponse;
 import back.sw.domain.comment.entity.Comment;
 import back.sw.domain.comment.entity.CommentAnonymousProfile;
 import back.sw.domain.comment.repository.CommentRepository;
@@ -22,6 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -29,6 +34,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,7 +65,7 @@ class AdminServiceTest {
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
-                () -> adminService.getPostReports(1)
+                () -> adminService.getPostReports(1, 0, 20)
         );
 
         assertEquals("403-1", exception.getRsData().resultCode());
@@ -75,14 +81,18 @@ class AdminServiceTest {
         ReflectionTestUtils.setField(report, "id", 100);
 
         when(memberRepository.findById(1)).thenReturn(Optional.of(admin));
-        when(postReportRepository.findAllByOrderByCreateDateDescIdDesc()).thenReturn(List.of(report));
+        when(postReportRepository.findAll(any(Pageable.class))).thenReturn(
+                new PageImpl<>(List.of(report), PageRequest.of(0, 20), 1)
+        );
 
-        List<AdminPostReportItemResponse> items = adminService.getPostReports(1);
+        AdminPostReportListResponse response = adminService.getPostReports(1, 0, 20);
+        List<AdminPostReportItemResponse> items = response.items();
 
         assertEquals(1, items.size());
         assertEquals(100, items.get(0).reportId());
         assertEquals(10, items.get(0).postId());
         assertEquals("SPAM", items.get(0).reason().name());
+        assertEquals(1, response.totalElements());
     }
 
     @Test
@@ -97,14 +107,18 @@ class AdminServiceTest {
         ReflectionTestUtils.setField(report, "id", 101);
 
         when(memberRepository.findById(1)).thenReturn(Optional.of(admin));
-        when(commentReportRepository.findAllByOrderByCreateDateDescIdDesc()).thenReturn(List.of(report));
+        when(commentReportRepository.findAll(any(Pageable.class))).thenReturn(
+                new PageImpl<>(List.of(report), PageRequest.of(0, 20), 1)
+        );
 
-        List<AdminCommentReportItemResponse> items = adminService.getCommentReports(1);
+        AdminCommentReportListResponse response = adminService.getCommentReports(1, 0, 20);
+        List<AdminCommentReportItemResponse> items = response.items();
 
         assertEquals(1, items.size());
         assertEquals(101, items.get(0).reportId());
         assertEquals(20, items.get(0).commentId());
         assertEquals(11, items.get(0).postId());
+        assertEquals(1, response.totalElements());
     }
 
     @Test

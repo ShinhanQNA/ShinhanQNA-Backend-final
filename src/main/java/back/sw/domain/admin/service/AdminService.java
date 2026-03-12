@@ -1,7 +1,9 @@
 package back.sw.domain.admin.service;
 
 import back.sw.domain.admin.dto.response.AdminCommentReportItemResponse;
+import back.sw.domain.admin.dto.response.AdminCommentReportListResponse;
 import back.sw.domain.admin.dto.response.AdminPostReportItemResponse;
+import back.sw.domain.admin.dto.response.AdminPostReportListResponse;
 import back.sw.domain.comment.entity.Comment;
 import back.sw.domain.comment.repository.CommentRepository;
 import back.sw.domain.member.entity.Member;
@@ -12,27 +14,34 @@ import back.sw.domain.post.repository.PostRepository;
 import back.sw.domain.report.repository.CommentReportRepository;
 import back.sw.domain.report.repository.PostReportRepository;
 import back.sw.global.exception.ServiceException;
+import back.sw.global.util.PageUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AdminService {
+    private static final Sort REPORT_SORT = Sort.by(
+            Sort.Order.desc("createDate"),
+            Sort.Order.desc("id")
+    );
+
     private final MemberRepository memberRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostReportRepository postReportRepository;
     private final CommentReportRepository commentReportRepository;
 
-    public List<AdminPostReportItemResponse> getPostReports(int memberId) {
+    public AdminPostReportListResponse getPostReports(int memberId, int page, int size) {
         assertAdmin(memberId);
 
-        return postReportRepository.findAllByOrderByCreateDateDescIdDesc()
-                .stream()
+        Pageable pageable = PageUtils.createPageable(page, size, REPORT_SORT);
+        Page<AdminPostReportItemResponse> reportPage = postReportRepository.findAll(pageable)
                 .map(report -> new AdminPostReportItemResponse(
                         report.getId(),
                         report.postId(),
@@ -41,15 +50,24 @@ public class AdminService {
                         report.getDescription(),
                         report.isPostDeleted(),
                         report.getCreateDate()
-                ))
-                .toList();
+                ));
+
+        return new AdminPostReportListResponse(
+                reportPage.getContent(),
+                reportPage.getNumber(),
+                reportPage.getSize(),
+                reportPage.getTotalPages(),
+                reportPage.getTotalElements(),
+                reportPage.hasNext(),
+                reportPage.hasPrevious()
+        );
     }
 
-    public List<AdminCommentReportItemResponse> getCommentReports(int memberId) {
+    public AdminCommentReportListResponse getCommentReports(int memberId, int page, int size) {
         assertAdmin(memberId);
 
-        return commentReportRepository.findAllByOrderByCreateDateDescIdDesc()
-                .stream()
+        Pageable pageable = PageUtils.createPageable(page, size, REPORT_SORT);
+        Page<AdminCommentReportItemResponse> reportPage = commentReportRepository.findAll(pageable)
                 .map(report -> new AdminCommentReportItemResponse(
                         report.getId(),
                         report.commentId(),
@@ -59,8 +77,17 @@ public class AdminService {
                         report.getDescription(),
                         report.isCommentDeleted(),
                         report.getCreateDate()
-                ))
-                .toList();
+                ));
+
+        return new AdminCommentReportListResponse(
+                reportPage.getContent(),
+                reportPage.getNumber(),
+                reportPage.getSize(),
+                reportPage.getTotalPages(),
+                reportPage.getTotalElements(),
+                reportPage.hasNext(),
+                reportPage.hasPrevious()
+        );
     }
 
     @Transactional

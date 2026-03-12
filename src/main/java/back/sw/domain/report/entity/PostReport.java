@@ -53,4 +53,16 @@ public class PostReport extends BaseEntity {
     public static PostReport create(Post post, Member member, ReportReason reason, String description) {
         return new PostReport(post, member, reason, description);
     }
+
+    public int postId() {
+        return post.getId();
+    }
+
+    public int reporterId() {
+        return member.getId();
+    }
+
+    public boolean isPostDeleted() {
+        return post.isDeleted();
+    }
 }

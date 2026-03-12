@@ -1,5 +1,6 @@
 package back.sw.domain.post.controller;
 
+import back.sw.domain.post.controller.docs.PostApiDocs;
 import back.sw.domain.post.dto.request.PostCreateRequest;
 import back.sw.domain.post.dto.request.PostUpdateRequest;
 import back.sw.domain.post.dto.response.PostCreateResponse;
@@ -36,7 +37,7 @@ import java.util.List;
         value = "EI_EXPOSE_REP2",
         justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
 )
-public class PostController {
+public class PostController implements PostApiDocs {
     private final PostService postService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

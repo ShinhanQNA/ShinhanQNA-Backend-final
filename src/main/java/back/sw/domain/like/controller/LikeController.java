@@ -1,5 +1,6 @@
 package back.sw.domain.like.controller;
 
+import back.sw.domain.like.controller.docs.LikeApiDocs;
 import back.sw.domain.like.dto.response.LikeToggleResponse;
 import back.sw.domain.like.service.LikeService;
 import back.sw.global.response.RsData;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
         value = "EI_EXPOSE_REP2",
         justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
 )
-public class LikeController {
+public class LikeController implements LikeApiDocs {
     private final LikeService likeService;
 
     @PostMapping

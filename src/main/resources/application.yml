@@ -41,6 +41,8 @@ custom:
   cors:
     allowed-origin-patterns:
       - http://localhost:3000
+  swagger:
+    enabled: false
 
 logging:
   level:

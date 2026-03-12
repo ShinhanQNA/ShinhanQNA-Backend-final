@@ -15,6 +15,16 @@ spring:
   flyway:
     enabled: true
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+custom:
+  swagger:
+    enabled: false
+
 logging:
   level:
     root: WARN

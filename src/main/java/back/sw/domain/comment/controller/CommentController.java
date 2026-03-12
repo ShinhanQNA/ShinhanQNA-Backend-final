@@ -1,5 +1,6 @@
 package back.sw.domain.comment.controller;
 
+import back.sw.domain.comment.controller.docs.CommentApiDocs;
 import back.sw.domain.comment.dto.request.CommentCreateRequest;
 import back.sw.domain.comment.dto.request.CommentUpdateRequest;
 import back.sw.domain.comment.dto.response.CommentCreateResponse;
@@ -28,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
         value = "EI_EXPOSE_REP2",
         justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
 )
-public class CommentController {
+public class CommentController implements CommentApiDocs {
     private final CommentService commentService;
 
     @PostMapping

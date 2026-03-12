@@ -163,6 +163,70 @@ class PostIntegrationTest {
     }
 
     @Test
+    void 삭제된_게시글_수정_요청은_404() throws Exception {
+        String writerToken = registerAndLogin("postuser12@univ.ac.kr", "20251022", "postnick12");
+        int postId = objectMapper.readTree(
+                createPost(writerToken, "FREE", "삭제될 게시글", "삭제 후 수정 시도", List.of())
+                        .getResponse()
+                        .getContentAsString()
+        ).get("data").get("postId").asInt();
+
+        mockMvc.perform(
+                delete("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+        ).andExpect(status().isOk());
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "수정 시도",
+                                "content", "수정 시도 내용"
+                        )))
+        ).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void 게시글_수정_요청시_빈_제목은_400() throws Exception {
+        String writerToken = registerAndLogin("postuser13@univ.ac.kr", "20251023", "postnick13");
+        int postId = objectMapper.readTree(
+                createPost(writerToken, "FREE", "정상 제목", "정상 내용", List.of())
+                        .getResponse()
+                        .getContentAsString()
+        ).get("data").get("postId").asInt();
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", " ",
+                                "content", "수정 내용"
+                        )))
+        ).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 게시글_수정_요청시_내용_누락은_400() throws Exception {
+        String writerToken = registerAndLogin("postuser14@univ.ac.kr", "20251024", "postnick14");
+        int postId = objectMapper.readTree(
+                createPost(writerToken, "QNA", "질문", "내용", List.of())
+                        .getResponse()
+                        .getContentAsString()
+        ).get("data").get("postId").asInt();
+
+        mockMvc.perform(
+                patch("/api/v1/posts/{postId}", postId)
+                        .header("Authorization", "Bearer " + writerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "제목만 존재"
+                        )))
+        ).andExpect(status().isBadRequest());
+    }
+
+    @Test
     void 게시글_목록은_최신순_정렬() throws Exception {
         String accessToken = registerAndLogin("postuser4@univ.ac.kr", "20251004", "postnick4");
 

@@ -1,6 +1,7 @@
 package back.sw.global.security;
 
 import back.sw.domain.member.entity.Member;
+import back.sw.domain.member.entity.MemberRole;
 import back.sw.global.security.TokenAuthenticationException.TokenErrorType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -16,6 +17,7 @@ import java.util.Date;
 
 @Component
 public final class JwtTokenProvider {
+    private static final String ROLE_CLAIM = "role";
     private static final String TOKEN_TYPE_CLAIM = "tokenType";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String REFRESH_TOKEN_TYPE = "REFRESH";
@@ -42,18 +44,32 @@ public final class JwtTokenProvider {
         return generateToken(member, refreshTokenExpirationMillis, REFRESH_TOKEN_TYPE);
     }
 
+    public AccessTokenPayload getAccessTokenPayload(String token) {
+        Claims claims = parseClaims(token);
+        validateTokenType(claims, ACCESS_TOKEN_TYPE);
+
+        return new AccessTokenPayload(
+                parseMemberId(claims),
+                parseMemberRole(claims)
+        );
+    }
+
     public int getMemberIdFromAccessToken(String token) {
-        return getMemberIdByExpectedTokenType(token, ACCESS_TOKEN_TYPE);
+        return getAccessTokenPayload(token).memberId();
+    }
+
+    public MemberRole getMemberRoleFromAccessToken(String token) {
+        return getAccessTokenPayload(token).role();
     }
 
     public int getMemberIdFromRefreshToken(String token) {
-        return getMemberIdByExpectedTokenType(token, REFRESH_TOKEN_TYPE);
+        Claims claims = parseClaims(token);
+        validateTokenType(claims, REFRESH_TOKEN_TYPE);
+
+        return parseMemberId(claims);
     }
 
-    private int getMemberIdByExpectedTokenType(String token, String expectedTokenType) {
-        Claims claims = parseClaims(token);
-        validateTokenType(claims, expectedTokenType);
-
+    private int parseMemberId(Claims claims) {
         try {
             return Integer.parseInt(claims.getSubject());
         } catch (NumberFormatException e) {
@@ -76,6 +92,20 @@ public final class JwtTokenProvider {
                 .compact();
     }
 
+    private MemberRole parseMemberRole(Claims claims) {
+        Object roleClaim = claims.get(ROLE_CLAIM);
+
+        if (!(roleClaim instanceof String roleValue)) {
+            throw new TokenAuthenticationException(TokenErrorType.INVALID, "유효하지 않은 토큰입니다.");
+        }
+
+        try {
+            return MemberRole.valueOf(roleValue);
+        } catch (IllegalArgumentException e) {
+            throw new TokenAuthenticationException(TokenErrorType.INVALID, "유효하지 않은 토큰입니다.");
+        }
+    }
+
     private void validateTokenType(Claims claims, String expectedTokenType) {
         Object tokenType = claims.get(TOKEN_TYPE_CLAIM);
         if (!(tokenType instanceof String tokenTypeValue) || !expectedTokenType.equals(tokenTypeValue)) {
@@ -95,5 +125,8 @@ public final class JwtTokenProvider {
         } catch (JwtException | IllegalArgumentException e) {
             throw new TokenAuthenticationException(TokenErrorType.INVALID, "유효하지 않은 토큰입니다.");
         }
+    }
+
+    public record AccessTokenPayload(int memberId, MemberRole role) {
     }
 }

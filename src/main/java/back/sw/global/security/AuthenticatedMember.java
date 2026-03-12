@@ -1,4 +1,6 @@
 package back.sw.global.security;
 
-public record AuthenticatedMember(int memberId) {
+import back.sw.domain.member.entity.MemberRole;
+
+public record AuthenticatedMember(int memberId, MemberRole role) {
 }

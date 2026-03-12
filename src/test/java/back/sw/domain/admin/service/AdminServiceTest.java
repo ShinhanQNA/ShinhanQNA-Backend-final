@@ -11,6 +11,7 @@ import back.sw.domain.member.entity.Member;
 import back.sw.domain.member.entity.MemberRole;
 import back.sw.domain.member.repository.MemberRepository;
 import back.sw.domain.post.entity.BoardType;
+import back.sw.domain.post.event.PostDeletedEvent;
 import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.repository.PostRepository;
 import back.sw.domain.report.entity.CommentReport;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
@@ -54,6 +56,9 @@ class AdminServiceTest {
 
     @Mock
     private CommentReportRepository commentReportRepository;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private AdminService adminService;
@@ -133,6 +138,7 @@ class AdminServiceTest {
         adminService.deletePost(1, 30);
 
         assertEquals(true, post.isDeleted());
+        verify(applicationEventPublisher).publishEvent(new PostDeletedEvent(30));
     }
 
     @Test

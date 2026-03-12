@@ -8,6 +8,7 @@ import back.sw.domain.post.dto.response.PostCreateResponse;
 import back.sw.domain.post.dto.response.PostDetailResponse;
 import back.sw.domain.post.dto.response.PostPageResponse;
 import back.sw.domain.post.dto.response.PostSummaryResponse;
+import back.sw.domain.post.event.PostDeletedEvent;
 import back.sw.domain.post.entity.BoardType;
 import back.sw.domain.post.entity.Post;
 import back.sw.domain.post.entity.PostImage;
@@ -18,7 +19,9 @@ import back.sw.domain.recruitment.dto.response.RecruitmentDetailResponse;
 import back.sw.domain.recruitment.service.RecruitmentService;
 import back.sw.global.exception.ServiceException;
 import back.sw.global.util.PageUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -32,6 +35,10 @@ import java.util.stream.IntStream;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@SuppressFBWarnings(
+        value = "EI_EXPOSE_REP2",
+        justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
+)
 public class PostService {
     private static final int MAX_IMAGE_COUNT = 5;
 
@@ -40,6 +47,7 @@ public class PostService {
     private final PostImageRepository postImageRepository;
     private final PostImageStorageService postImageStorageService;
     private final RecruitmentService recruitmentService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public PostCreateResponse create(int memberId, PostCreateRequest request, List<? extends MultipartFile> images) {
@@ -114,6 +122,7 @@ public class PostService {
         }
 
         post.softDelete();
+        applicationEventPublisher.publishEvent(new PostDeletedEvent(postId));
     }
 
     private PostSummaryResponse toSummaryResponse(Post post) {

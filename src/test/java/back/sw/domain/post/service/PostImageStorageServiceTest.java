@@ -54,6 +54,39 @@ class PostImageStorageServiceTest {
         assertEquals("400-1", exception.getRsData().resultCode());
     }
 
+    @Test
+    void deleteAllRemovesStoredFiles() throws Exception {
+        PostImageStorageService storageService = new PostImageStorageService(tempDir.toString());
+        List<MockMultipartFile> images = List.of(
+                createImage("c.png", "image-c"),
+                createImage("d.png", "image-d")
+        );
+        List<String> urls = storageService.store(images);
+
+        storageService.deleteAll(urls);
+
+        assertTrue(Files.notExists(tempDir.resolve(extractFileName(urls.get(0)))));
+        assertTrue(Files.notExists(tempDir.resolve(extractFileName(urls.get(1)))));
+    }
+
+    @Test
+    void deleteAllContinuesWhenSingleDeletionFails() throws Exception {
+        PostImageStorageService storageService = new PostImageStorageService(tempDir.toString());
+
+        Path blockedDir = tempDir.resolve("blocked");
+        Files.createDirectories(blockedDir);
+        Files.writeString(blockedDir.resolve("child.txt"), "child");
+
+        MockMultipartFile validImage = createImage("e.png", "image-e");
+        String validUrl = storageService.store(List.of(validImage)).get(0);
+        Path validPath = tempDir.resolve(extractFileName(validUrl));
+
+        storageService.deleteAll(List.of("/uploads/blocked", validUrl));
+
+        assertTrue(Files.exists(blockedDir));
+        assertTrue(Files.notExists(validPath));
+    }
+
     private MockMultipartFile createImage(String fileName, String content) {
         return new MockMultipartFile(
                 "images",

@@ -1,5 +1,6 @@
 package back.sw.domain.admin.controller;
 
+import back.sw.domain.admin.controller.docs.AdminApiDocs;
 import back.sw.domain.admin.dto.response.AdminCommentReportListResponse;
 import back.sw.domain.admin.dto.response.AdminPostReportListResponse;
 import back.sw.domain.admin.service.AdminService;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
         value = "EI_EXPOSE_REP2",
         justification = "Spring IoC가 관리하는 불변 참조 주입 패턴으로 방어적 복사가 불필요합니다."
 )
-public class AdminController {
+public class AdminController implements AdminApiDocs {
     private final AdminService adminService;
 
     @GetMapping("/reports/posts")

@@ -9,9 +9,9 @@ main() {
     ensure_layout
     sync_deploy_assets
 
-    ensure_env_file "$ROOT_DIR/shared/.env.base" "$ASSET_DIR/env/.env.base.example"
-    ensure_env_file "$ROOT_DIR/shared/.env.prod" "$ASSET_DIR/env/.env.prod.example"
-    ensure_env_file "$ROOT_DIR/shared/.env.validation" "$ASSET_DIR/env/.env.validation.example"
+    ensure_env_file "$ROOT_DIR/shared/.env.base" "$ASSET_DIR/env/env.base.example"
+    ensure_env_file "$ROOT_DIR/shared/.env.prod" "$ASSET_DIR/env/env.prod.example"
+    ensure_env_file "$ROOT_DIR/shared/.env.validation" "$ASSET_DIR/env/env.validation.example"
 
     if [[ ! -f "$ROOT_DIR/prod/active_state.env" ]]; then
         cat >"$ROOT_DIR/prod/active_state.env" <<EOF

@@ -1,0 +1,23 @@
+services:
+  app_blue:
+    image: ${IMAGE_BLUE}
+    container_name: sw-connect-prod-blue
+    restart: unless-stopped
+    env_file:
+      - ../shared/.env.prod
+    networks:
+      - sw-connect-network
+
+  app_green:
+    image: ${IMAGE_GREEN}
+    container_name: sw-connect-prod-green
+    restart: unless-stopped
+    env_file:
+      - ../shared/.env.prod
+    networks:
+      - sw-connect-network
+
+networks:
+  sw-connect-network:
+    name: sw-connect-network
+    external: true

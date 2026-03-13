@@ -1,0 +1,14 @@
+services:
+  app_validation:
+    image: ${IMAGE_VALIDATION}
+    container_name: sw-connect-validation
+    restart: unless-stopped
+    env_file:
+      - ../shared/.env.validation
+    networks:
+      - sw-connect-network
+
+networks:
+  sw-connect-network:
+    name: sw-connect-network
+    external: true

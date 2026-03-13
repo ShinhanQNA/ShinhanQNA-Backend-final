@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/prometheus").permitAll()
                         .requestMatchers(SWAGGER_PATHS)
                         .access((authentication, context) -> new AuthorizationDecision(swaggerEnabled))
                         .requestMatchers("/uploads/**").permitAll()

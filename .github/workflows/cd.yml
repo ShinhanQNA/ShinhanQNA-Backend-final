@@ -113,6 +113,28 @@ jobs:
           target: "/opt/sw-connect/shared/artifacts"
           rm: true
 
+      - name: Login GHCR on VM and pre-pull image
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            GHCR_USERNAME='${{ secrets.GHCR_USERNAME }}'
+            GHCR_READ_TOKEN='${{ secrets.GHCR_READ_TOKEN }}'
+            IMAGE_REF='${{ needs.build-and-push.outputs.image_ref }}'
+
+            if [[ -z "$GHCR_USERNAME" || -z "$GHCR_READ_TOKEN" ]]; then
+              echo "GHCR credentials are required: GHCR_USERNAME, GHCR_READ_TOKEN"
+              exit 1
+            fi
+
+            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+            docker pull "$IMAGE_REF"
+
       - name: Run validation deploy
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -176,6 +198,28 @@ jobs:
           source: "deploy"
           target: "/opt/sw-connect/shared/artifacts"
           rm: true
+
+      - name: Login GHCR on VM and pre-pull image
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            GHCR_USERNAME='${{ secrets.GHCR_USERNAME }}'
+            GHCR_READ_TOKEN='${{ secrets.GHCR_READ_TOKEN }}'
+            IMAGE_REF='${{ needs.build-and-push.outputs.image_ref }}'
+
+            if [[ -z "$GHCR_USERNAME" || -z "$GHCR_READ_TOKEN" ]]; then
+              echo "GHCR credentials are required: GHCR_USERNAME, GHCR_READ_TOKEN"
+              exit 1
+            fi
+
+            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+            docker pull "$IMAGE_REF"
 
       - name: Run prod deploy
         uses: appleboy/ssh-action@v1.2.0

@@ -3,8 +3,11 @@ services:
     image: ${IMAGE_VALIDATION}
     container_name: sw-connect-validation
     restart: unless-stopped
+    user: "${HOST_UID}:${HOST_GID}"
     env_file:
       - ../shared/.env.validation
+    volumes:
+      - ../shared/uploads/validation:/opt/sw-connect/shared/uploads/validation
     networks:
       - sw-connect-network
 

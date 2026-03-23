@@ -12,10 +12,12 @@ fi
 main() {
     "$SCRIPT_DIR/bootstrap_base.sh"
 
-    local active_color image_blue image_green target_color previous_color
+    local active_color image_blue image_green target_color previous_color host_uid host_gid
     active_color="$(read_state_value ACTIVE_COLOR || true)"
     image_blue="$(read_state_value IMAGE_BLUE || true)"
     image_green="$(read_state_value IMAGE_GREEN || true)"
+    host_uid="$(id -u)"
+    host_gid="$(id -g)"
 
     if [[ -z "$active_color" ]]; then
         active_color="blue"
@@ -43,6 +45,8 @@ main() {
     cat >"$ROOT_DIR/prod/.runtime.env" <<EOF
 IMAGE_BLUE=${image_blue}
 IMAGE_GREEN=${image_green}
+HOST_UID=${host_uid}
+HOST_GID=${host_gid}
 EOF
 
     log "prod 배포 시작: target=${target_color}, image=${IMAGE_REF}"

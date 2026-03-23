@@ -12,8 +12,14 @@ fi
 main() {
     "$SCRIPT_DIR/bootstrap_base.sh"
 
+    local host_uid host_gid
+    host_uid="$(id -u)"
+    host_gid="$(id -g)"
+
     cat >"$ROOT_DIR/validation/.runtime.env" <<EOF
 IMAGE_VALIDATION=${IMAGE_REF}
+HOST_UID=${host_uid}
+HOST_GID=${host_gid}
 EOF
 
     log "validation 배포 시작: ${IMAGE_REF}"

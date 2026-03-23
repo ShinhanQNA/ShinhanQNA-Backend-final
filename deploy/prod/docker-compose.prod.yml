@@ -3,8 +3,11 @@ services:
     image: ${IMAGE_BLUE}
     container_name: sw-connect-prod-blue
     restart: unless-stopped
+    user: "${HOST_UID}:${HOST_GID}"
     env_file:
       - ../shared/.env.prod
+    volumes:
+      - ../shared/uploads/prod:/opt/sw-connect/shared/uploads/prod
     networks:
       - sw-connect-network
 
@@ -12,8 +15,11 @@ services:
     image: ${IMAGE_GREEN}
     container_name: sw-connect-prod-green
     restart: unless-stopped
+    user: "${HOST_UID}:${HOST_GID}"
     env_file:
       - ../shared/.env.prod
+    volumes:
+      - ../shared/uploads/prod:/opt/sw-connect/shared/uploads/prod
     networks:
       - sw-connect-network
 

@@ -87,6 +87,14 @@ jobs:
         with:
           ref: ${{ needs.build-and-push.outputs.head_sha }}
 
+      - name: Write deploy env files on runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .cd-env
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .cd-env/.env.base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_VALIDATION }}' > .cd-env/.env.validation
+
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -99,7 +107,7 @@ jobs:
             set -euo pipefail
             OWNER_USER="$(id -un)"
             OWNER_GROUP="$(id -gn)"
-            sudo mkdir -p /opt/sw-connect/shared/artifacts
+            sudo mkdir -p /opt/sw-connect/shared /opt/sw-connect/shared/artifacts
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
 
       - name: Upload deploy assets to VM
@@ -112,6 +120,17 @@ jobs:
           source: "deploy"
           target: "/opt/sw-connect/shared/artifacts"
           rm: true
+
+      - name: Upload deploy env files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          source: ".cd-env/.env.base,.cd-env/.env.validation"
+          target: "/opt/sw-connect/shared"
+          overwrite: true
 
       - name: Login GHCR on VM and pre-pull image
         uses: appleboy/ssh-action@v1.2.0
@@ -145,16 +164,12 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            mkdir -p /opt/sw-connect/shared
-
-            cat > /opt/sw-connect/shared/.env.base <<'EOF'
-            ${{ secrets.SW_DEPLOY_ENV_BASE }}
-            EOF
-
-            cat > /opt/sw-connect/shared/.env.validation <<'EOF'
-            ${{ secrets.SW_DEPLOY_ENV_VALIDATION }}
-            EOF
-
+            test -f /opt/sw-connect/shared/.env.base || { echo "Missing env file: /opt/sw-connect/shared/.env.base"; exit 1; }
+            test -f /opt/sw-connect/shared/.env.validation || { echo "Missing env file: /opt/sw-connect/shared/.env.validation"; exit 1; }
+            if grep -q '^DRONE_' /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation; then
+              echo "Invalid env file: DRONE_ artifact detected"
+              exit 1
+            fi
             chmod 600 /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation
 
             ROOT_DIR=/opt/sw-connect \
@@ -173,6 +188,14 @@ jobs:
         with:
           ref: ${{ needs.build-and-push.outputs.head_sha }}
 
+      - name: Write deploy env files on runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .cd-env
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .cd-env/.env.base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_PROD }}' > .cd-env/.env.prod
+
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -185,7 +208,7 @@ jobs:
             set -euo pipefail
             OWNER_USER="$(id -un)"
             OWNER_GROUP="$(id -gn)"
-            sudo mkdir -p /opt/sw-connect/shared/artifacts
+            sudo mkdir -p /opt/sw-connect/shared /opt/sw-connect/shared/artifacts
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
 
       - name: Upload deploy assets to VM
@@ -198,6 +221,17 @@ jobs:
           source: "deploy"
           target: "/opt/sw-connect/shared/artifacts"
           rm: true
+
+      - name: Upload deploy env files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          source: ".cd-env/.env.base,.cd-env/.env.prod"
+          target: "/opt/sw-connect/shared"
+          overwrite: true
 
       - name: Login GHCR on VM and pre-pull image
         uses: appleboy/ssh-action@v1.2.0
@@ -231,16 +265,12 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            mkdir -p /opt/sw-connect/shared
-
-            cat > /opt/sw-connect/shared/.env.base <<'EOF'
-            ${{ secrets.SW_DEPLOY_ENV_BASE }}
-            EOF
-
-            cat > /opt/sw-connect/shared/.env.prod <<'EOF'
-            ${{ secrets.SW_DEPLOY_ENV_PROD }}
-            EOF
-
+            test -f /opt/sw-connect/shared/.env.base || { echo "Missing env file: /opt/sw-connect/shared/.env.base"; exit 1; }
+            test -f /opt/sw-connect/shared/.env.prod || { echo "Missing env file: /opt/sw-connect/shared/.env.prod"; exit 1; }
+            if grep -q '^DRONE_' /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod; then
+              echo "Invalid env file: DRONE_ artifact detected"
+              exit 1
+            fi
             chmod 600 /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod
 
             ROOT_DIR=/opt/sw-connect \

@@ -2,7 +2,7 @@
 
 ## 개요
 - 단일 VM 경로는 `/opt/sw-connect`를 사용한다.
-- 공통 스택은 `base`(redis, npmplus, gateway, prometheus, grafana), 앱 스택은 `prod`, `validation`으로 분리한다.
+- 공통 스택은 `base`(redis, node-exporter, npmplus, gateway, prometheus, grafana), 앱 스택은 `prod`, `validation`으로 분리한다.
 - `main`은 prod blue/green 무중단 배포, `develop`은 validation 재기동 배포를 사용한다.
 - `/actuator/prometheus`는 gateway에서 `403`으로 차단하여 외부 노출하지 않는다(내부 컨테이너 네트워크에서만 스크랩).
 

@@ -28,9 +28,9 @@ EOF
     fi
     write_prod_gateway_conf "$active_color" "$ROOT_DIR/base/nginx/prod-gateway.conf"
 
-    compose_base up -d redis redis-exporter prod-gateway validation-gateway npmplus prometheus grafana
+    compose_base up -d redis redis-exporter node-exporter prod-gateway validation-gateway npmplus prometheus grafana
     switch_prod_gateway "$active_color" || true
-    log "base stack 준비 완료: redis/npmplus/gateway/prometheus/grafana"
+    log "base stack 준비 완료: redis/node-exporter/npmplus/gateway/prometheus/grafana"
 }
 
 main "$@"

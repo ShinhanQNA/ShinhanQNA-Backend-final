@@ -23,6 +23,9 @@ ensure_layout() {
     mkdir -p \
         "$ROOT_DIR/base/nginx" \
         "$ROOT_DIR/base/prometheus" \
+        "$ROOT_DIR/base/grafana/dashboards" \
+        "$ROOT_DIR/base/grafana/provisioning/dashboards" \
+        "$ROOT_DIR/base/grafana/provisioning/datasources" \
         "$ROOT_DIR/prod" \
         "$ROOT_DIR/validation" \
         "$ROOT_DIR/scripts" \
@@ -45,9 +48,13 @@ ensure_env_file() {
 }
 
 sync_deploy_assets() {
+    [[ -f "$ASSET_DIR/base/docker-compose.base.yml" ]] || fail "ASSET_DIR가 올바르지 않습니다: $ASSET_DIR"
+    [[ -d "$ASSET_DIR/base/grafana" ]] || fail "Grafana 자산 디렉터리를 찾을 수 없습니다: $ASSET_DIR/base/grafana"
+
     cp -f "$ASSET_DIR/base/docker-compose.base.yml" "$ROOT_DIR/base/docker-compose.yml"
     cp -f "$ASSET_DIR/base/nginx/validation-gateway.conf" "$ROOT_DIR/base/nginx/validation-gateway.conf"
     cp -f "$ASSET_DIR/base/prometheus/prometheus.yml" "$ROOT_DIR/base/prometheus/prometheus.yml"
+    cp -Rf "$ASSET_DIR/base/grafana/." "$ROOT_DIR/base/grafana/"
     cp -f "$ASSET_DIR/prod/docker-compose.prod.yml" "$ROOT_DIR/prod/docker-compose.yml"
     cp -f "$ASSET_DIR/validation/docker-compose.validation.yml" "$ROOT_DIR/validation/docker-compose.yml"
     cp -f "$ASSET_DIR/scripts/"*.sh "$ROOT_DIR/scripts/"

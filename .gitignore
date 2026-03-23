@@ -18,6 +18,19 @@ build/
 
 # Sensitive local data
 secrets/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+uploads/
+logs/
 
 ### STS ###
 .apt_generated

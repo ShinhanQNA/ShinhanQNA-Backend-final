@@ -1,0 +1,212 @@
+name: cd-deploy
+
+on:
+  workflow_run:
+    workflows: ["quality-gate"]
+    types: [completed]
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: cd-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.head_branch == 'develop' || github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.vars.outputs.image_ref }}
+      head_sha: ${{ steps.vars.outputs.head_sha }}
+      head_branch: ${{ steps.vars.outputs.head_branch }}
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set image vars
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_NAME="ghcr.io/${OWNER_LC}/sw-connect-backend"
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          SHORT_SHA="${HEAD_SHA::7}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          BRANCH_LATEST_TAG="${HEAD_BRANCH}-latest"
+
+          echo "image_ref=${IMAGE_NAME}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+          echo "head_branch=${HEAD_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_name=${IMAGE_NAME}" >> "$GITHUB_ENV"
+          echo "sha_tag=sha-${SHORT_SHA}" >> "$GITHUB_ENV"
+          echo "branch_latest_tag=${BRANCH_LATEST_TAG}" >> "$GITHUB_ENV"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.image_name }}:${{ env.sha_tag }}
+            ${{ env.image_name }}:${{ env.branch_latest_tag }}
+
+  deploy-validation:
+    if: needs.build-and-push.outputs.head_branch == 'develop'
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-and-push.outputs.head_sha }}
+
+      - name: Upload deploy assets to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          source: "deploy"
+          target: "/opt/sw-connect/shared/artifacts"
+          rm: true
+
+      - name: Run validation deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/sw-connect/shared
+
+            cat > /opt/sw-connect/shared/.env.base <<'EOF'
+            ${{ secrets.SW_DEPLOY_ENV_BASE }}
+            EOF
+
+            cat > /opt/sw-connect/shared/.env.validation <<'EOF'
+            ${{ secrets.SW_DEPLOY_ENV_VALIDATION }}
+            EOF
+
+            chmod 600 /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation
+
+            ROOT_DIR=/opt/sw-connect \
+            ASSET_DIR=/opt/sw-connect/shared/artifacts/deploy \
+            IMAGE_REF='${{ needs.build-and-push.outputs.image_ref }}' \
+            bash /opt/sw-connect/shared/artifacts/deploy/scripts/deploy_validation.sh
+
+  deploy-prod:
+    if: needs.build-and-push.outputs.head_branch == 'main'
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build-and-push.outputs.head_sha }}
+
+      - name: Upload deploy assets to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          source: "deploy"
+          target: "/opt/sw-connect/shared/artifacts"
+          rm: true
+
+      - name: Run prod deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/sw-connect/shared
+
+            cat > /opt/sw-connect/shared/.env.base <<'EOF'
+            ${{ secrets.SW_DEPLOY_ENV_BASE }}
+            EOF
+
+            cat > /opt/sw-connect/shared/.env.prod <<'EOF'
+            ${{ secrets.SW_DEPLOY_ENV_PROD }}
+            EOF
+
+            chmod 600 /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod
+
+            ROOT_DIR=/opt/sw-connect \
+            ASSET_DIR=/opt/sw-connect/shared/artifacts/deploy \
+            IMAGE_REF='${{ needs.build-and-push.outputs.image_ref }}' \
+            bash /opt/sw-connect/shared/artifacts/deploy/scripts/deploy_prod.sh
+
+  release-tag:
+    if: needs.build-and-push.outputs.head_branch == 'main'
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-prod]
+
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.build-and-push.outputs.head_sha }}
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Calculate next semver
+        id: semver
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEXT_TAG="$(bash deploy/scripts/next_semver_tag.sh)"
+          if git rev-parse "${NEXT_TAG}" >/dev/null 2>&1; then
+            echo "create_tag=false" >> "$GITHUB_OUTPUT"
+            echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "create_tag=true" >> "$GITHUB_OUTPUT"
+          echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        if: steps.semver.outputs.create_tag == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.semver.outputs.next_tag }}" "${{ needs.build-and-push.outputs.head_sha }}"
+          git push origin "${{ steps.semver.outputs.next_tag }}"

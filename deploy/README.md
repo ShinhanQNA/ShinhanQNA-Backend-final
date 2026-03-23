@@ -22,6 +22,8 @@
 주의:
 - `GRAFANA_ADMIN_PASSWORD`는 필수 값이다(미설정 시 base stack 기동 실패).
 - `GHCR_READ_TOKEN`은 최소 권한 `read:packages`만 부여한다.
+- CD는 러너에서 `.env.base/.env.prod/.env.validation` 파일을 생성해 VM으로 SCP 업로드한다(원격 heredoc 미사용).
+- 배포 직전 `.env`에 `DRONE_` 키가 포함되면 오염으로 간주하고 배포를 실패 처리한다.
 
 ## npmplus 초기 1회 설정
 CD는 npmplus 컨테이너를 자동 기동하지만, 프록시 호스트 등록은 초기 1회 수동 설정이 필요하다.

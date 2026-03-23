@@ -91,8 +91,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .env.base
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_VALIDATION }}' > .env.validation
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > env_base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_VALIDATION }}' > env_validation
 
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
@@ -110,6 +110,7 @@ jobs:
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
             rm -rf /opt/sw-connect/shared/.cd-env
             rm -f /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation
+            rm -f /opt/sw-connect/shared/env_base /opt/sw-connect/shared/env_validation
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7
@@ -129,7 +130,7 @@ jobs:
           username: ${{ secrets.SW_VM_USER }}
           key: ${{ secrets.SW_VM_SSH_KEY }}
           port: ${{ secrets.SW_VM_PORT }}
-          source: ".env.base,.env.validation"
+          source: "env_base,env_validation"
           target: "/opt/sw-connect/shared"
           overwrite: true
 
@@ -165,6 +166,11 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+            test -f /opt/sw-connect/shared/env_base || { echo "Missing env payload: /opt/sw-connect/shared/env_base"; exit 1; }
+            test -f /opt/sw-connect/shared/env_validation || { echo "Missing env payload: /opt/sw-connect/shared/env_validation"; exit 1; }
+            install -m 600 /opt/sw-connect/shared/env_base /opt/sw-connect/shared/.env.base
+            install -m 600 /opt/sw-connect/shared/env_validation /opt/sw-connect/shared/.env.validation
+            rm -f /opt/sw-connect/shared/env_base /opt/sw-connect/shared/env_validation
             test -f /opt/sw-connect/shared/.env.base || { echo "Missing env file: /opt/sw-connect/shared/.env.base"; exit 1; }
             test -f /opt/sw-connect/shared/.env.validation || { echo "Missing env file: /opt/sw-connect/shared/.env.validation"; exit 1; }
             if grep -q '^DRONE_' /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation; then
@@ -193,8 +199,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .env.base
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_PROD }}' > .env.prod
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > env_base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_PROD }}' > env_prod
 
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
@@ -212,6 +218,7 @@ jobs:
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
             rm -rf /opt/sw-connect/shared/.cd-env
             rm -f /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod
+            rm -f /opt/sw-connect/shared/env_base /opt/sw-connect/shared/env_prod
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7
@@ -231,7 +238,7 @@ jobs:
           username: ${{ secrets.SW_VM_USER }}
           key: ${{ secrets.SW_VM_SSH_KEY }}
           port: ${{ secrets.SW_VM_PORT }}
-          source: ".env.base,.env.prod"
+          source: "env_base,env_prod"
           target: "/opt/sw-connect/shared"
           overwrite: true
 
@@ -267,6 +274,11 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+            test -f /opt/sw-connect/shared/env_base || { echo "Missing env payload: /opt/sw-connect/shared/env_base"; exit 1; }
+            test -f /opt/sw-connect/shared/env_prod || { echo "Missing env payload: /opt/sw-connect/shared/env_prod"; exit 1; }
+            install -m 600 /opt/sw-connect/shared/env_base /opt/sw-connect/shared/.env.base
+            install -m 600 /opt/sw-connect/shared/env_prod /opt/sw-connect/shared/.env.prod
+            rm -f /opt/sw-connect/shared/env_base /opt/sw-connect/shared/env_prod
             test -f /opt/sw-connect/shared/.env.base || { echo "Missing env file: /opt/sw-connect/shared/.env.base"; exit 1; }
             test -f /opt/sw-connect/shared/.env.prod || { echo "Missing env file: /opt/sw-connect/shared/.env.prod"; exit 1; }
             if grep -q '^DRONE_' /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod; then

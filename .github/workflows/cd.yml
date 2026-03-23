@@ -91,9 +91,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .cd-env
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .cd-env/.env.base
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_VALIDATION }}' > .cd-env/.env.validation
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .env.base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_VALIDATION }}' > .env.validation
 
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
@@ -109,6 +108,8 @@ jobs:
             OWNER_GROUP="$(id -gn)"
             sudo mkdir -p /opt/sw-connect/shared /opt/sw-connect/shared/artifacts
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
+            rm -rf /opt/sw-connect/shared/.cd-env
+            rm -f /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.validation
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7
@@ -128,7 +129,7 @@ jobs:
           username: ${{ secrets.SW_VM_USER }}
           key: ${{ secrets.SW_VM_SSH_KEY }}
           port: ${{ secrets.SW_VM_PORT }}
-          source: ".cd-env/.env.base,.cd-env/.env.validation"
+          source: ".env.base,.env.validation"
           target: "/opt/sw-connect/shared"
           overwrite: true
 
@@ -192,9 +193,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .cd-env
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .cd-env/.env.base
-          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_PROD }}' > .cd-env/.env.prod
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_BASE }}' > .env.base
+          printf '%s\n' '${{ secrets.SW_DEPLOY_ENV_PROD }}' > .env.prod
 
       - name: Prepare deploy directories on VM
         uses: appleboy/ssh-action@v1.2.0
@@ -210,6 +210,8 @@ jobs:
             OWNER_GROUP="$(id -gn)"
             sudo mkdir -p /opt/sw-connect/shared /opt/sw-connect/shared/artifacts
             sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
+            rm -rf /opt/sw-connect/shared/.cd-env
+            rm -f /opt/sw-connect/shared/.env.base /opt/sw-connect/shared/.env.prod
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7
@@ -229,7 +231,7 @@ jobs:
           username: ${{ secrets.SW_VM_USER }}
           key: ${{ secrets.SW_VM_SSH_KEY }}
           port: ${{ secrets.SW_VM_PORT }}
-          source: ".cd-env/.env.base,.cd-env/.env.prod"
+          source: ".env.base,.env.prod"
           target: "/opt/sw-connect/shared"
           overwrite: true
 

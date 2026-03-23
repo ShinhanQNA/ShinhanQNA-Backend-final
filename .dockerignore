@@ -1,8 +1,10 @@
 .git
 .github
 .gradle
+.gradle-local
 .idea
 build
+deploy
 secrets
 uploads
 logs
@@ -10,6 +12,9 @@ logs
 docs
 roles
 skills
+
+AGENTS.md
+HELP.md
 
 .env
 .env.*

@@ -73,6 +73,8 @@ jobs:
           tags: |
             ${{ env.image_name }}:${{ env.sha_tag }}
             ${{ env.image_name }}:${{ env.branch_latest_tag }}
+          cache-from: type=gha,scope=sw-connect-backend
+          cache-to: type=gha,mode=max,scope=sw-connect-backend
 
   deploy-validation:
     if: needs.build-and-push.outputs.head_branch == 'develop'
@@ -84,6 +86,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.build-and-push.outputs.head_sha }}
+
+      - name: Prepare deploy directories on VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            OWNER_USER="$(id -un)"
+            OWNER_GROUP="$(id -gn)"
+            sudo mkdir -p /opt/sw-connect/shared/artifacts
+            sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7
@@ -133,6 +150,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.build-and-push.outputs.head_sha }}
+
+      - name: Prepare deploy directories on VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SW_VM_HOST }}
+          username: ${{ secrets.SW_VM_USER }}
+          key: ${{ secrets.SW_VM_SSH_KEY }}
+          port: ${{ secrets.SW_VM_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            OWNER_USER="$(id -un)"
+            OWNER_GROUP="$(id -gn)"
+            sudo mkdir -p /opt/sw-connect/shared/artifacts
+            sudo chown -R "${OWNER_USER}:${OWNER_GROUP}" /opt/sw-connect
 
       - name: Upload deploy assets to VM
         uses: appleboy/scp-action@v0.1.7

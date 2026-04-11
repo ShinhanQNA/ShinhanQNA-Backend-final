@@ -127,6 +127,38 @@ wait_internal_http() {
     done
 }
 
+dump_container_diagnostics() {
+    local container_name="$1"
+    local tail_lines="${2:-200}"
+
+    log "----- diagnostics: ${container_name} -----"
+
+    if ! docker ps -a --format '{{.Names}}' | grep -Fxq "$container_name"; then
+        log "container not found: ${container_name}"
+        return 0
+    fi
+
+    docker ps -a --filter "name=^/${container_name}$" \
+        --format 'name={{.Names}} status={{.Status}} image={{.Image}}' || true
+    docker inspect --format \
+        'state={{.State.Status}} running={{.State.Running}} restarting={{.State.Restarting}} exitCode={{.State.ExitCode}} error={{.State.Error}} startedAt={{.State.StartedAt}} finishedAt={{.State.FinishedAt}}' \
+        "$container_name" || true
+    docker logs --tail "$tail_lines" "$container_name" 2>&1 || true
+
+    log "----- end diagnostics: ${container_name} -----"
+}
+
+dump_failure_diagnostics() {
+    local reason="$1"
+    shift
+
+    log "실패 진단 시작: ${reason}"
+    for container_name in "$@"; do
+        dump_container_diagnostics "$container_name"
+    done
+    log "실패 진단 종료: ${reason}"
+}
+
 read_state_value() {
     local key="$1"
     local state_file="$ROOT_DIR/prod/active_state.env"

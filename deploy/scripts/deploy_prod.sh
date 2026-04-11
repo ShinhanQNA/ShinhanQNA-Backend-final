@@ -53,17 +53,31 @@ EOF
     compose_prod up -d "app_${target_color}"
 
     if ! wait_internal_http "http://sw-connect-prod-${target_color}:8080/actuator/health" 240; then
+        dump_failure_diagnostics \
+            "신규 ${target_color} 앱 health check 실패" \
+            "sw-connect-prod-${target_color}" \
+            sw-connect-prod-gateway \
+            sw-connect-validation-gateway
         compose_prod stop "app_${target_color}" || true
         fail "신규 ${target_color} 앱 health check 실패"
     fi
 
     if ! switch_prod_gateway "$target_color"; then
+        dump_failure_diagnostics \
+            "gateway 전환 실패" \
+            sw-connect-prod-gateway \
+            "sw-connect-prod-${target_color}"
         compose_prod stop "app_${target_color}" || true
         switch_prod_gateway "$previous_color" || true
         fail "gateway 전환 실패"
     fi
 
     if ! wait_internal_http "http://sw-connect-prod-gateway:8080/actuator/health" 180; then
+        dump_failure_diagnostics \
+            "gateway 전환 후 health check 실패" \
+            sw-connect-prod-gateway \
+            "sw-connect-prod-${target_color}" \
+            "sw-connect-prod-${previous_color}"
         switch_prod_gateway "$previous_color" || true
         compose_prod stop "app_${target_color}" || true
         fail "gateway 전환 후 health check 실패"

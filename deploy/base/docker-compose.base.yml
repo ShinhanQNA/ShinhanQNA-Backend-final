@@ -58,6 +58,8 @@ services:
     image: ${NPMPLUS_IMAGE:-ghcr.io/zoeyvid/npmplus:latest}
     container_name: sw-connect-npmplus
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Seoul
     ports:
       - "80:80"
       - "443:443/tcp"

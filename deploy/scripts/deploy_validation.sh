@@ -26,10 +26,20 @@ EOF
     compose_validation up -d --force-recreate app_validation
 
     if ! wait_internal_http "http://sw-connect-validation:8080/actuator/health" 180; then
+        dump_failure_diagnostics \
+            "validation 앱 health check 실패" \
+            sw-connect-validation \
+            sw-connect-validation-gateway \
+            sw-connect-prod-gateway
         fail "validation 앱 health check 실패"
     fi
 
     if ! wait_internal_http "http://sw-connect-validation-gateway:8080/actuator/health" 180; then
+        dump_failure_diagnostics \
+            "validation gateway health check 실패" \
+            sw-connect-validation-gateway \
+            sw-connect-validation \
+            sw-connect-prod-gateway
         fail "validation gateway health check 실패"
     fi
 

@@ -58,6 +58,8 @@ services:
     image: ${NPMPLUS_IMAGE:-ghcr.io/zoeyvid/npmplus:latest}
     container_name: sw-connect-npmplus
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Seoul
     ports:
       - "80:80"
       - "443:443/tcp"
@@ -65,7 +67,6 @@ services:
       - "127.0.0.1:81:81"
     volumes:
       - npmplus_data:/data
-      - npmplus_letsencrypt:/etc/letsencrypt
     depends_on:
       - prod-gateway
       - validation-gateway
@@ -110,6 +111,5 @@ networks:
 volumes:
   redis_data:
   npmplus_data:
-  npmplus_letsencrypt:
   prometheus_data:
   grafana_data:
